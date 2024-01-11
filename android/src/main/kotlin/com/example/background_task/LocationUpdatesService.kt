@@ -32,14 +32,14 @@ import com.google.android.gms.location.Priority
 class LocationUpdatesService: Service() {
 
 
-    private val mBinder = LocalBinder()
-    private var mNotificationManager: NotificationManager? = null
-    private var mLocationRequest: LocationRequest? = null
-    private var mFusedLocationClient: FusedLocationProviderClient? = null
-    private var mFusedLocationCallback: LocationCallback? = null
+    private val binder = LocalBinder()
+    private var notificationManager: NotificationManager? = null
+    private var locationRequest: LocationRequest? = null
+    private var fusedLocationClient: FusedLocationProviderClient? = null
+    private var fusedLocationCallback: LocationCallback? = null
     private var isGoogleApiAvailable: Boolean = false
     private var isStarted: Boolean = false
-    private var mServiceHandler: Handler? = null
+    private var serviceHandler: Handler? = null
 
     companion object {
         private val TAG = LocationUpdatesService::class.java.simpleName
@@ -47,14 +47,12 @@ class LocationUpdatesService: Service() {
         private val _locationStatusLiveData = MutableLiveData<String>()
         val locationStatusLiveData: LiveData<String> = _locationStatusLiveData
 
-        val NOTIFICATION_TITLE = "Background service is running"
-        val NOTIFICATION_MESSAGE = "Background service is running"
-        val NOTIFICATION_ICON = "@mipmap/ic_launcher"
+        var NOTIFICATION_TITLE = "Background service is running"
+        var NOTIFICATION_MESSAGE = "Background service is running"
+        var NOTIFICATION_ICON = "@mipmap/ic_launcher"
         private const val PACKAGE_NAME =
             "com.google.android.gms.location.sample.locationupdatesforegroundservice"
-        private const val CHANNEL_ID = "channel_01"
-        internal const val ACTION_BROADCAST = "$PACKAGE_NAME.broadcast"
-        internal const val EXTRA_LOCATION = "$PACKAGE_NAME.location"
+        private const val CHANNEL_ID = "background_task_channel_01"
         private const val EXTRA_STARTED_FROM_NOTIFICATION = "$PACKAGE_NAME.started_from_notification"
 
         private const val NOTIFICATION_ID = 12345678
@@ -109,12 +107,12 @@ class LocationUpdatesService: Service() {
 
     override fun onBind(intent: Intent?): IBinder {
         val distanceFilter = intent?.getDoubleExtra("distance_filter", 0.0)
-        mLocationRequest = if (distanceFilter != null) {
+        locationRequest = if (distanceFilter != null) {
             createRequest(distanceFilter.toFloat())
         } else {
             createRequest(0.0.toFloat())
         }
-        return mBinder
+        return binder
     }
 
 
@@ -124,8 +122,8 @@ class LocationUpdatesService: Service() {
         isGoogleApiAvailable = googleAPIAvailability == ConnectionResult.SUCCESS
         println("isGoogleApiAvailable $isGoogleApiAvailable")
         if (isGoogleApiAvailable) {
-            mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-            mFusedLocationCallback = object : LocationCallback() {
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+            fusedLocationCallback = object : LocationCallback() {
                 override fun onLocationResult(locationResult: LocationResult) {
                     super.onLocationResult(locationResult)
                     _locationStatusLiveData.value = "updated"
@@ -135,14 +133,14 @@ class LocationUpdatesService: Service() {
 
         val handlerThread = HandlerThread(TAG)
         handlerThread.start()
-        mServiceHandler = Handler(handlerThread.looper)
+        serviceHandler = Handler(handlerThread.looper)
 
-        mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "Application Name"
             val mChannel = NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_DEFAULT)
             mChannel.setSound(null, null)
-            mNotificationManager!!.createNotificationChannel(mChannel)
+            notificationManager!!.createNotificationChannel(mChannel)
         }
 
         broadcastReceiver = object : BroadcastReceiver() {
@@ -166,9 +164,9 @@ class LocationUpdatesService: Service() {
         unregisterReceiver(broadcastReceiver)
         try {
             if (isGoogleApiAvailable) {
-                mFusedLocationClient!!.removeLocationUpdates(mFusedLocationCallback!!)
+                fusedLocationClient!!.removeLocationUpdates(fusedLocationCallback!!)
             }
-            mNotificationManager!!.cancel(NOTIFICATION_ID)
+            notificationManager!!.cancel(NOTIFICATION_ID)
         } catch (unlikely: SecurityException) {
             Log.e(TAG, "$unlikely")
         }
@@ -177,10 +175,10 @@ class LocationUpdatesService: Service() {
     @SuppressLint("MissingPermission")
     fun requestLocationUpdates() {
         try {
-            if (isGoogleApiAvailable &&  mLocationRequest != null) {
-                mFusedLocationClient!!.requestLocationUpdates(
-                    mLocationRequest!!,
-                    mFusedLocationCallback!!,
+            if (isGoogleApiAvailable && locationRequest != null) {
+                fusedLocationClient!!.requestLocationUpdates(
+                    locationRequest!!,
+                    fusedLocationCallback!!,
                     Looper.myLooper()
                 )
             }

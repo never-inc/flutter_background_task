@@ -65,6 +65,8 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
       startLocationService(distanceFilter)
     } else if (call.method == "stop_background_task") {
       stopLocationService()
+    } else if (call.method == "set_android_notification") {
+      setAndroidNotification(call.argument("title"),call.argument("message"),call.argument("icon"))
     }
     result.success(false)
   }
@@ -89,7 +91,6 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   override fun onDetachedFromActivity() {
     setActivity(null)
   }
-
 
   override fun onRequestPermissionsResult(
     requestCode: Int,
@@ -158,17 +159,22 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   }
 
   private fun requestPermissions() {
-    if(activity == null) {
-      return
+    activity?.also {
+      val shouldProvideRationale = ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.ACCESS_FINE_LOCATION)
+      if (shouldProvideRationale) {
+        Log.i(TAG, "Displaying permission rationale to provide additional context.")
+      } else {
+        Log.i(TAG, "Requesting permission")
+        ActivityCompat.requestPermissions(it,
+          arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+          REQUEST_PERMISSIONS_REQUEST_CODE)
+      }
     }
-    val shouldProvideRationale = ActivityCompat.shouldShowRequestPermissionRationale(activity!!, Manifest.permission.ACCESS_FINE_LOCATION)
-    if (shouldProvideRationale) {
-      Log.i(TAG, "Displaying permission rationale to provide additional context.")
-    } else {
-      Log.i(TAG, "Requesting permission")
-      ActivityCompat.requestPermissions(activity!!,
-        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-        REQUEST_PERMISSIONS_REQUEST_CODE)
-    }
+  }
+  private fun setAndroidNotification(title: String?, message: String?, icon: String?) {
+    if (title != null) LocationUpdatesService.NOTIFICATION_TITLE = title
+    if (message != null) LocationUpdatesService.NOTIFICATION_MESSAGE = message
+    if (icon != null) LocationUpdatesService.NOTIFICATION_ICON = icon
+    service?.updateNotification()
   }
 }
