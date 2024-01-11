@@ -27,7 +27,7 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   private var context: Context? = null
   private lateinit var channel : MethodChannel
   private var activity: Activity? = null
-  private var bound: Boolean = false
+  private var isStarted: Boolean = false
   private var service: LocationUpdatesService? = null
   private var eventSink: EventChannel.EventSink? = null
   private var eventChannel: EventChannel? = null
@@ -38,7 +38,7 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
 
   private val serviceConnection = object : ServiceConnection {
     override fun onServiceConnected(name: ComponentName, service: IBinder) {
-      bound = true
+      isStarted = true
       val binder = service as LocationUpdatesService.LocalBinder
       this@BackgroundTaskPlugin.service = binder.service
       requestLocation()
@@ -97,12 +97,10 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     permissions: Array<out String>,
     grantResults: IntArray
   ): Boolean {
-    Log.i(TAG, "onRequestPermissionResult")
     if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
-      when {
-        grantResults.isEmpty() -> Log.i(TAG, "User interaction was cancelled.")
-        grantResults[0] == PackageManager.PERMISSION_GRANTED -> service?.requestLocationUpdates()
-        else -> Log.d(TAG, "permission_denied_explanation")
+      when (PackageManager.PERMISSION_GRANTED) {
+          grantResults[0] -> service?.requestLocationUpdates()
+          else -> Log.d(TAG, "permission is denied")
       }
     }
     return true
@@ -118,8 +116,8 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   }
 
   private fun setActivity(binding: ActivityPluginBinding?) {
-    this.activity = binding?.activity
-    if(this.activity != null){
+    activity = binding?.activity
+    if(activity != null){
       if (!checkPermissions()) {
         requestPermissions()
       }
@@ -128,23 +126,25 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     }
   }
 
+  private val observer = Observer<String> {
+    eventSink?.success("updated")
+  }
+
   private fun startLocationService(distanceFilter: Double?) {
-    if (!bound) {
+    if (!isStarted) {
       val intent = Intent(context, LocationUpdatesService::class.java)
-      intent.putExtra("distance_filter", distanceFilter)
+      intent.putExtra("distanceFilter", distanceFilter)
       context!!.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-      LocationUpdatesService.locationStatusLiveData.observeForever {
-        Log.i(TAG, "locationStatusLiveData: $it")
-        eventSink?.success("updated")
-      }
+      LocationUpdatesService.locationStatusLiveData.observeForever(observer)
     }
   }
 
   private fun stopLocationService() {
     service?.removeLocationUpdates()
-    if (bound) {
+    LocationUpdatesService.locationStatusLiveData.removeObserver(observer)
+    if (isStarted) {
       context!!.unbindService(serviceConnection)
-      bound = false
+      isStarted = false
     }
   }
 
@@ -161,10 +161,7 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   private fun requestPermissions() {
     activity?.also {
       val shouldProvideRationale = ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.ACCESS_FINE_LOCATION)
-      if (shouldProvideRationale) {
-        Log.i(TAG, "Displaying permission rationale to provide additional context.")
-      } else {
-        Log.i(TAG, "Requesting permission")
+      if (!shouldProvideRationale) {
         ActivityCompat.requestPermissions(it,
           arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
           REQUEST_PERMISSIONS_REQUEST_CODE)

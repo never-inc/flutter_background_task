@@ -31,7 +31,6 @@ import com.google.android.gms.location.Priority
 
 class LocationUpdatesService: Service() {
 
-
     private val binder = LocalBinder()
     private var notificationManager: NotificationManager? = null
     private var locationRequest: LocationRequest? = null
@@ -47,8 +46,8 @@ class LocationUpdatesService: Service() {
         private val _locationStatusLiveData = MutableLiveData<String>()
         val locationStatusLiveData: LiveData<String> = _locationStatusLiveData
 
-        var NOTIFICATION_TITLE = "Background service is running"
-        var NOTIFICATION_MESSAGE = "Background service is running"
+        var NOTIFICATION_TITLE = "Background task is running"
+        var NOTIFICATION_MESSAGE = "Background task is running"
         var NOTIFICATION_ICON = "@mipmap/ic_launcher"
         private const val PACKAGE_NAME =
             "com.google.android.gms.location.sample.locationupdatesforegroundservice"
@@ -72,7 +71,7 @@ class LocationUpdatesService: Service() {
             } else {
                 PendingIntent.getActivity(this, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT)
             }
-            val builder = NotificationCompat.Builder(this, "BackgroundLocation")
+            val builder = NotificationCompat.Builder(this, "BackgroundTaskLocation")
                 .setContentTitle(NOTIFICATION_TITLE)
                 .setOngoing(true)
                 .setSound(null)
@@ -94,7 +93,6 @@ class LocationUpdatesService: Service() {
             get() = this@LocationUpdatesService
     }
 
-    // https://tomas-repcik.medium.com/locationrequest-create-got-deprecated-how-to-fix-it-e4f814138764
     private fun createRequest(distanceFilter: Float): LocationRequest =
         LocationRequest.Builder(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY,
@@ -106,7 +104,7 @@ class LocationUpdatesService: Service() {
         }.build()
 
     override fun onBind(intent: Intent?): IBinder {
-        val distanceFilter = intent?.getDoubleExtra("distance_filter", 0.0)
+        val distanceFilter = intent?.getDoubleExtra("distanceFilter", 0.0)
         locationRequest = if (distanceFilter != null) {
             createRequest(distanceFilter.toFloat())
         } else {
@@ -115,12 +113,11 @@ class LocationUpdatesService: Service() {
         return binder
     }
 
-
     override fun onCreate() {
         val googleAPIAvailability = GoogleApiAvailability.getInstance()
             .isGooglePlayServicesAvailable(applicationContext)
         isGoogleApiAvailable = googleAPIAvailability == ConnectionResult.SUCCESS
-        println("isGoogleApiAvailable $isGoogleApiAvailable")
+        Log.d(TAG,"isGoogleApiAvailable $isGoogleApiAvailable")
         if (isGoogleApiAvailable) {
             fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
             fusedLocationCallback = object : LocationCallback() {
@@ -195,6 +192,7 @@ class LocationUpdatesService: Service() {
             val notificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.notify(NOTIFICATION_ID, notification.build())
+            Log.d(TAG, NOTIFICATION_TITLE)
         }
     }
 
