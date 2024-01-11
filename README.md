@@ -48,11 +48,25 @@ iOS: Info.plist
 Android: AndroidManifest.xml
 
 ```xml
-<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/> 
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/> 
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>   <!-- option -->
 
-<!-- option -->
-<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <application ... >
+        <activity ... >
+            ...
+        </activity>
+    
+        <!-- add -->
+        <service
+            android:name="com.neverjp.background_task.LocationUpdatesService"
+            android:foregroundServiceType="location"
+            android:exported="false"
+        />
+
+    </application>
+</manifest>
 ```
