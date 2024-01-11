@@ -119,8 +119,11 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     eventChannel = null
   }
 
-  private val observer = Observer<String> {
-    eventSink?.success("updated")
+  private val observer = Observer<Pair<Double?, Double?>> {
+    val location = HashMap<String, Double?>()
+    location["lat"] = it.first
+    location["lng"] = it.second
+    eventSink?.success(location)
   }
 
   private fun startLocationService(distanceFilter: Double?) {

@@ -18,13 +18,13 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String _text = 'no start';
-  late final StreamSubscription<String?> _disposer;
+  late final StreamSubscription<EventType?> _disposer;
 
   @override
   void initState() {
     super.initState();
     _disposer = BackgroundTask.instance.stream.listen((event) {
-      final message = '${event ?? ''}: ${DateTime.now()}';
+      final message = '${event?.lat}, ${event?.lng}\n${DateTime.now()}';
       debugPrint(message);
       setState(() {
         _text = message;
@@ -58,7 +58,10 @@ class _MyAppState extends State<MyApp> {
           title: const Text('Plugin example app'),
         ),
         body: Center(
-          child: Text(_text),
+          child: Text(
+            _text,
+            textAlign: TextAlign.center,
+          ),
         ),
         persistentFooterAlignment: AlignmentDirectional.center,
         persistentFooterButtons: [

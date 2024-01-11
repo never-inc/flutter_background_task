@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+typedef EventType = ({double? lat, double? lng});
+
 class BackgroundTask {
   BackgroundTask(this._methodChannel, this._eventChannel);
 
@@ -43,8 +45,11 @@ class BackgroundTask {
     }
   }
 
-  Stream<String?> get stream => _eventChannel
-      .receiveBroadcastStream()
-      .map((event) => event as String?)
-      .asBroadcastStream();
+  Stream<EventType?> get stream =>
+      _eventChannel.receiveBroadcastStream().map((event) {
+        final json = event as Map;
+        final lat = json['lat'] as double?;
+        final lng = json['lng'] as double?;
+        return (lat: lat, lng: lng);
+      }).asBroadcastStream();
 }

@@ -43,8 +43,8 @@ class LocationUpdatesService: Service() {
     companion object {
         private val TAG = LocationUpdatesService::class.java.simpleName
 
-        private val _locationStatusLiveData = MutableLiveData<String>()
-        val locationStatusLiveData: LiveData<String> = _locationStatusLiveData
+        private val _locationStatusLiveData = MutableLiveData<Pair<Double?, Double?>>()
+        val locationStatusLiveData: LiveData<Pair<Double?, Double?>> = _locationStatusLiveData
 
         var NOTIFICATION_TITLE = "Background task is running"
         var NOTIFICATION_MESSAGE = "Background task is running"
@@ -123,7 +123,10 @@ class LocationUpdatesService: Service() {
             fusedLocationCallback = object : LocationCallback() {
                 override fun onLocationResult(locationResult: LocationResult) {
                     super.onLocationResult(locationResult)
-                    _locationStatusLiveData.value = "updated"
+                    val newLastLocation = locationResult.lastLocation
+                    val lat = newLastLocation?.latitude
+                    val lng = newLastLocation?.latitude
+                    _locationStatusLiveData.value = Pair(lat, lng)
                 }
             }
         }
