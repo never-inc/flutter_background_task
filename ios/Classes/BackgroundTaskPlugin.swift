@@ -4,7 +4,6 @@ import CoreLocation
 
 public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate, FlutterStreamHandler {
 
-    
    static var locationManager: CLLocationManager?
    static var channel: FlutterMethodChannel?
    private var eventSink: FlutterEventSink?
@@ -30,9 +29,8 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
        BackgroundTaskPlugin.locationManager?.pausesLocationUpdatesAutomatically = false
        BackgroundTaskPlugin.locationManager?.activityType = .other
 
-       BackgroundTaskPlugin.locationManager?.requestAlwaysAuthorization()
-       
        if (call.method == "start_background_task") {
+           BackgroundTaskPlugin.locationManager?.requestAlwaysAuthorization()
            let args = call.arguments as? Dictionary<String, Any>
            let distanceFilter = args?["distanceFilter"] as? Double
            BackgroundTaskPlugin.locationManager?.distanceFilter = distanceFilter ?? 0
@@ -48,7 +46,8 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
    }
 
    public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-       eventSink?("updated")
+       print("didUpdateLocations")
+       eventSink?("didUpdateLocations")
    }
 
    public func onListen(withArguments arguments: Any?, eventSink: @escaping FlutterEventSink) -> FlutterError? {

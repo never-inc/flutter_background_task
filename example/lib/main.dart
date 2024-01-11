@@ -59,7 +59,7 @@ class _MyAppState extends State<MyApp> {
           ),
           FilledButton(
             onPressed: () async {
-              await BackgroundTask.instance.start(distanceFilter: 1);
+              await BackgroundTask.instance.start();
               setState(() {
                 _text = 'start';
               });
