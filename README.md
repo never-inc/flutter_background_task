@@ -8,7 +8,7 @@ Enable developers to continue processing even when the application transitions t
 
 ```dart
 // Monitor notifications of background processes.
-BackgroundTask.instance.stream.listen((_) {
+BackgroundTask.instance.stream.listen((event) {
     // Implement the process you want to run in the background.
 });
 
