@@ -1,4 +1,4 @@
-package com.example.background_task
+package com.neverjp.background_task
 
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel

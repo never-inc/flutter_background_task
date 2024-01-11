@@ -1,4 +1,4 @@
-package com.example.background_task
+package com.neverjp.background_task
 
 import android.annotation.SuppressLint
 import android.app.NotificationChannel

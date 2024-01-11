@@ -22,7 +22,7 @@ flutter:
   plugin:
     platforms:
       android:
-        package: com.example.background_task
+        package: com.neverjp.background_task
         pluginClass: BackgroundTaskPlugin
       ios:
         pluginClass: BackgroundTaskPlugin

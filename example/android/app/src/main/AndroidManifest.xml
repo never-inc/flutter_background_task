@@ -33,7 +33,7 @@
         </activity>
 
         <service
-            android:name="com.example.background_task.LocationUpdatesService"
+            android:name="com.neverjp.background_task.LocationUpdatesService"
             android:foregroundServiceType="location"
             android:exported="false"
             />
