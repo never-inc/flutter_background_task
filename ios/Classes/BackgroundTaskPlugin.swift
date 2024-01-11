@@ -50,8 +50,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
    }
 
    public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-       print("didUpdateLocations")
-       eventSink?("didUpdateLocations")
+       eventSink?("updated")
    }
 
    public func onListen(withArguments arguments: Any?, eventSink: @escaping FlutterEventSink) -> FlutterError? {
