@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 
 class BackgroundTask {
@@ -22,6 +24,23 @@ class BackgroundTask {
 
   Future<void> stop() async {
     await _methodChannel.invokeMethod<bool>('stop_background_task');
+  }
+
+  Future<void> setAndroidNotification({
+    String? title,
+    String? message,
+    String? icon,
+  }) async {
+    if (Platform.isAndroid) {
+      await _methodChannel.invokeMethod<bool>(
+        'set_android_notification',
+        {
+          'title': title,
+          'message': message,
+          'icon': icon,
+        },
+      );
+    }
   }
 
   Stream<String?> get stream => _eventChannel

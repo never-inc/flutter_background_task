@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:background_task/background_task.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(const MyApp());
@@ -23,11 +25,23 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _disposer = BackgroundTask.instance.stream.listen((event) {
       final message = '${event ?? ''}: ${DateTime.now()}';
-      print(message);
+      debugPrint(message);
       setState(() {
         _text = message;
       });
     });
+    if (Platform.isAndroid) {
+      Future(() async {
+        final result = await Permission.notification.request();
+        debugPrint('notification: $result');
+        if (result.isGranted) {
+          await BackgroundTask.instance.setAndroidNotification(
+            title: 'バックグラウンド処理',
+            message: 'バックグラウンド処理を実行中',
+          );
+        }
+      });
+    }
   }
 
   @override
