@@ -25,7 +25,11 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
        BackgroundTaskPlugin.locationManager?.delegate = self
        BackgroundTaskPlugin.locationManager?.allowsBackgroundLocationUpdates = true
        BackgroundTaskPlugin.locationManager?.showsBackgroundLocationIndicator = true
-       BackgroundTaskPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyReduced
+       if #available(iOS 14.0, *) {
+           BackgroundTaskPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyReduced
+       } else {
+           BackgroundTaskPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyThreeKilometers
+       }
        BackgroundTaskPlugin.locationManager?.pausesLocationUpdatesAutomatically = false
        BackgroundTaskPlugin.locationManager?.activityType = .other
 

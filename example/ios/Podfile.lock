@@ -4,11 +4,14 @@ PODS:
   - Flutter (1.0.0)
   - integration_test (0.0.1):
     - Flutter
+  - permission_handler_apple (9.1.1):
+    - Flutter
 
 DEPENDENCIES:
   - background_task (from `.symlinks/plugins/background_task/ios`)
   - Flutter (from `Flutter`)
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
+  - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
 
 EXTERNAL SOURCES:
   background_task:
@@ -17,12 +20,15 @@ EXTERNAL SOURCES:
     :path: Flutter
   integration_test:
     :path: ".symlinks/plugins/integration_test/ios"
+  permission_handler_apple:
+    :path: ".symlinks/plugins/permission_handler_apple/ios"
 
 SPEC CHECKSUMS:
   background_task: a584ba6e093a60641252e89f7cd404ec92a30c8d
   Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
   integration_test: 13825b8a9334a850581300559b8839134b124670
+  permission_handler_apple: e76247795d700c14ea09e3a2d8855d41ee80a2e6
 
-PODFILE CHECKSUM: 86af3595fc51923078cc15d399162581e514106e
+PODFILE CHECKSUM: 310b6882f9ceda0ace408435051a720c164bd83d
 
 COCOAPODS: 1.14.3
