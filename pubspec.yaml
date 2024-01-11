@@ -1,0 +1,28 @@
+name: background_task
+description: "A new Flutter plugin project."
+version: 0.0.1
+homepage:
+
+environment:
+  sdk: '>=3.2.3 <4.0.0'
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  plugin_platform_interface: ^2.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  pedantic_mono:
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.example.background_task
+        pluginClass: BackgroundTaskPlugin
+      ios:
+        pluginClass: BackgroundTaskPlugin
