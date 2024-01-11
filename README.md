@@ -10,6 +10,7 @@ Enable developers to continue processing even when the application transitions t
 // Monitor notifications of background processes.
 BackgroundTask.instance.stream.listen((event) {
     // Implement the process you want to run in the background.
+    // ex) Check health data.
 });
 
 // Start background processing with location updates.
@@ -43,30 +44,4 @@ iOS: Info.plist
     <string>fetch</string>
     <string>location</string>
 </array>
-```
-
-Android: AndroidManifest.xml
-
-```xml
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/> 
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>   <!-- option -->
-
-    <application ... >
-        <activity ... >
-            ...
-        </activity>
-    
-        <!-- add -->
-        <service
-            android:name="com.neverjp.background_task.LocationUpdatesService"
-            android:foregroundServiceType="location"
-            android:exported="false"
-        />
-
-    </application>
-</manifest>
 ```
