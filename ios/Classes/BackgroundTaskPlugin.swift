@@ -31,13 +31,12 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
            BackgroundTaskPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyThreeKilometers
        }
        BackgroundTaskPlugin.locationManager?.pausesLocationUpdatesAutomatically = false
-       BackgroundTaskPlugin.locationManager?.activityType = .other
 
        if (call.method == "start_background_task") {
            BackgroundTaskPlugin.locationManager?.requestAlwaysAuthorization()
            let args = call.arguments as? Dictionary<String, Any>
            let distanceFilter = args?["distanceFilter"] as? Double
-           BackgroundTaskPlugin.locationManager?.distanceFilter = distanceFilter ?? 0
+           BackgroundTaskPlugin.locationManager?.distanceFilter = distanceFilter ?? kCLDistanceFilterNone
            BackgroundTaskPlugin.locationManager?.startUpdatingLocation()
        } else if (call.method == "stop_background_task") {
            BackgroundTaskPlugin.locationManager?.stopUpdatingLocation()
