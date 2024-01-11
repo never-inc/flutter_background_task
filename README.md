@@ -31,7 +31,7 @@ dependencies:
 
 iOS: Info.plist
 
-```plist
+```text
 <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 <string>This app needs access to location.</string>
 <key>NSLocationAlwaysUsageDescription</key>
