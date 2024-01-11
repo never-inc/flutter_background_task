@@ -60,13 +60,17 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   }
 
   override fun onMethodCall(call: MethodCall, result: Result) {
-    if (call.method == "start_background_task") {
-      val distanceFilter = call.argument<Double>("distanceFilter")
-      startLocationService(distanceFilter)
-    } else if (call.method == "stop_background_task") {
-      stopLocationService()
-    } else if (call.method == "set_android_notification") {
-      setAndroidNotification(call.argument("title"),call.argument("message"),call.argument("icon"))
+    when (call.method) {
+        "start_background_task" -> {
+          val distanceFilter = call.argument<Double>("distanceFilter")
+          startLocationService(distanceFilter)
+        }
+        "stop_background_task" -> {
+          stopLocationService()
+        }
+        "set_android_notification" -> {
+          setAndroidNotification(call.argument("title"),call.argument("message"),call.argument("icon"))
+        }
     }
     result.success(false)
   }
@@ -76,7 +80,7 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   }
 
   override fun onAttachedToActivity(binding: ActivityPluginBinding) {
-    setActivity(binding)
+    activity = binding.activity
     binding.addRequestPermissionsResultListener(this)
   }
 
@@ -89,7 +93,7 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   }
 
   override fun onDetachedFromActivity() {
-    setActivity(null)
+    stopLocationService()
   }
 
   override fun onRequestPermissionsResult(
@@ -115,23 +119,15 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     eventChannel = null
   }
 
-  private fun setActivity(binding: ActivityPluginBinding?) {
-    activity = binding?.activity
-    if(activity != null){
-      if (!checkPermissions()) {
-        requestPermissions()
-      }
-    } else {
-      stopLocationService()
-    }
-  }
-
   private val observer = Observer<String> {
     eventSink?.success("updated")
   }
 
   private fun startLocationService(distanceFilter: Double?) {
     if (!isStarted) {
+      if (!checkPermissions()) {
+        requestPermissions()
+      }
       val intent = Intent(context, LocationUpdatesService::class.java)
       intent.putExtra("distanceFilter", distanceFilter)
       context!!.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
