@@ -1,4 +1,4 @@
-# flutter_background_task
+# background_task
 
 ## Motivation
 
