@@ -14,7 +14,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
 
        let channel = FlutterMethodChannel(name: "com.neverjp.background_task/methods", binaryMessenger: registrar.messenger())
        registrar.addMethodCallDelegate(instance, channel: channel)
-//        channel.setMethodCallHandler(instance.handle)
+       channel.setMethodCallHandler(instance.handle)
        BackgroundTaskPlugin.channel = channel
 
        let eventChannel = FlutterEventChannel(name: "com.neverjp.background_task/events", binaryMessenger: registrar.messenger())
@@ -24,13 +24,14 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
    public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
        BackgroundTaskPlugin.locationManager = CLLocationManager()
        BackgroundTaskPlugin.locationManager?.delegate = self
-       BackgroundTaskPlugin.locationManager?.requestAlwaysAuthorization()
        BackgroundTaskPlugin.locationManager?.allowsBackgroundLocationUpdates = true
        BackgroundTaskPlugin.locationManager?.showsBackgroundLocationIndicator = true
        BackgroundTaskPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyReduced
        BackgroundTaskPlugin.locationManager?.pausesLocationUpdatesAutomatically = false
        BackgroundTaskPlugin.locationManager?.activityType = .other
 
+       BackgroundTaskPlugin.locationManager?.requestAlwaysAuthorization()
+       
        if (call.method == "start_background_task") {
            let args = call.arguments as? Dictionary<String, Any>
            let distanceFilter = args?["distanceFilter"] as? Double

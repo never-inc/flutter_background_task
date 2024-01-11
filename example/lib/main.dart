@@ -22,9 +22,10 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _disposer = BackgroundTask.instance.stream.listen((event) {
-      debugPrint(event);
+      final message = '${event ?? ''}: ${DateTime.now()}';
+      print(message);
       setState(() {
-        _text = '${event ?? ''}: ${DateTime.now().millisecondsSinceEpoch}';
+        _text = message;
       });
     });
   }
