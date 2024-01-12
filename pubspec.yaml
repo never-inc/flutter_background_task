@@ -1,6 +1,6 @@
 name: background_task
 description: "Can be processed using location updates after the application transitions to the background."
-version: 0.0.3+1
+version: 0.0.4
 repository: https://github.com/never-inc/flutter_background_task
 homepage: https://github.com/never-inc/flutter_background_task
 

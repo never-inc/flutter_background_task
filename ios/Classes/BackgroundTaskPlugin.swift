@@ -27,22 +27,24 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if (call.method == "start_background_task") {
-            let locationManager = CLLocationManager()
-            BackgroundTaskPlugin.locationManager = locationManager
-            BackgroundTaskPlugin.locationManager?.delegate = self
-            BackgroundTaskPlugin.locationManager?.allowsBackgroundLocationUpdates = true
-            BackgroundTaskPlugin.locationManager?.showsBackgroundLocationIndicator = true
-            if #available(iOS 14.0, *) {
-               BackgroundTaskPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyReduced
-            } else {
-               BackgroundTaskPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyThreeKilometers
-            }
-            BackgroundTaskPlugin.locationManager?.pausesLocationUpdatesAutomatically = false
-            BackgroundTaskPlugin.locationManager?.requestAlwaysAuthorization()
             let args = call.arguments as? Dictionary<String, Any>
             let distanceFilter = args?["distanceFilter"] as? Double
-            BackgroundTaskPlugin.locationManager?.distanceFilter = distanceFilter ?? kCLDistanceFilterNone
-            BackgroundTaskPlugin.locationManager?.startUpdatingLocation()
+         
+            let locationManager = CLLocationManager()
+            locationManager.allowsBackgroundLocationUpdates = true
+            locationManager.showsBackgroundLocationIndicator = true
+            if #available(iOS 14.0, *) {
+                locationManager.desiredAccuracy = kCLLocationAccuracyReduced
+            } else {
+                locationManager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
+            }
+            locationManager.pausesLocationUpdatesAutomatically = false
+            locationManager.distanceFilter = distanceFilter ?? kCLDistanceFilterNone
+            locationManager.requestAlwaysAuthorization()
+            locationManager.delegate = self
+            locationManager.startUpdatingLocation()
+            
+            BackgroundTaskPlugin.locationManager = locationManager
             BackgroundTaskPlugin.isUpdatingLocation = true
             StatusEventStreamHandler.eventSink?(
                 StatusEventStreamHandler.StatusType.start.value
@@ -50,7 +52,6 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             result(true)
         } else if (call.method == "stop_background_task") {
             BackgroundTaskPlugin.locationManager?.stopUpdatingLocation()
-            BackgroundTaskPlugin.locationManager?.startMonitoringVisits()
             BackgroundTaskPlugin.isUpdatingLocation = false
             StatusEventStreamHandler.eventSink?(
                 StatusEventStreamHandler.StatusType.stop.value

@@ -1,4 +1,7 @@
-# 0.0.3+1
+# 0.0.4
+iOS Bug fixed.
+
+## 0.0.3+1
 Updated example.
 
 ## 0.0.3
