@@ -9,6 +9,46 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
     static var isUpdatingLocation = false
     private var bgEventSink: FlutterEventSink?
     private var isRunningEventSink: FlutterEventSink?
+    
+    enum DesiredAccuracy: String {
+        /// アプリが完全な精度の位置データを許可されていない場合に使用される精度のレベル
+        case reduced = "reduced"
+        /// ナビゲーションアプリのための高い精度と追加のセンサーも使用する
+        case bestForNavigation = "bestForNavigation"
+        /// 最高レベルの精度
+        case best = "best"
+        /// 10メートル以内の精度
+        case nearestTenMeters = "nearestTenMeters"
+        /// 100メートル以内の精度
+        case hundredMeters = "hundredMeters"
+        /// 1キロメートルでの精度
+        case kilometer = "kilometer"
+        /// キロメートルでの精度
+        case threeKilometers = "threeKilometers"
+        
+        var kCLLocation: CLLocationAccuracy {
+            switch (self) {
+            case .reduced:
+                if #available(iOS 14.0, *) {
+                    return kCLLocationAccuracyReduced
+                } else {
+                    return kCLLocationAccuracyThreeKilometers
+                }
+            case .bestForNavigation:
+                return kCLLocationAccuracyBestForNavigation
+            case .best:
+                return kCLLocationAccuracyBest
+            case .nearestTenMeters:
+                return kCLLocationAccuracyNearestTenMeters
+            case .hundredMeters:
+                return kCLLocationAccuracyHundredMeters
+            case .kilometer:
+                return kCLLocationAccuracyKilometer
+            case .threeKilometers:
+                return kCLLocationAccuracyThreeKilometers
+            }
+        }
+    }
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = BackgroundTaskPlugin()
@@ -29,15 +69,16 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
         if (call.method == "start_background_task") {
             let args = call.arguments as? Dictionary<String, Any>
             let distanceFilter = args?["distanceFilter"] as? Double
-         
+            let desiredAccuracy: DesiredAccuracy
+            if let value = args?["iOSDesiredAccuracy"] as? String, let type = DesiredAccuracy(rawValue: value) {
+                desiredAccuracy = type
+            } else {
+                desiredAccuracy = .reduced
+            }
             let locationManager = CLLocationManager()
             locationManager.allowsBackgroundLocationUpdates = true
             locationManager.showsBackgroundLocationIndicator = true
-            if #available(iOS 14.0, *) {
-                locationManager.desiredAccuracy = kCLLocationAccuracyReduced
-            } else {
-                locationManager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
-            }
+            locationManager.desiredAccuracy = desiredAccuracy.kCLLocation
             locationManager.pausesLocationUpdatesAutomatically = false
             locationManager.distanceFilter = distanceFilter ?? kCLDistanceFilterNone
             locationManager.requestAlwaysAuthorization()
@@ -47,7 +88,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             BackgroundTaskPlugin.locationManager = locationManager
             BackgroundTaskPlugin.isUpdatingLocation = true
             StatusEventStreamHandler.eventSink?(
-                StatusEventStreamHandler.StatusType.start.value
+                StatusEventStreamHandler.StatusType.start(message: "\(desiredAccuracy)").value
             )
             result(true)
         } else if (call.method == "stop_background_task") {
@@ -107,15 +148,15 @@ final class StatusEventStreamHandler: NSObject, FlutterStreamHandler {
     static var eventSink: FlutterEventSink?
     
     enum StatusType {
-        case start
+        case start(message: String)
         case stop
         case updated(message: String)
         case error(message: String)
         case permission(message: String)
         var value: String {
             switch (self) {
-            case .start:
-                return "start"
+            case .start(message: let message):
+                return "start,\(message)"
             case .stop:
                 return "stop"
             case .updated(message: let message):

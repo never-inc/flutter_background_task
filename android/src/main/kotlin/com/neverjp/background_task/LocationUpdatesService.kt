@@ -55,7 +55,7 @@ class LocationUpdatesService: Service() {
         private const val CHANNEL_ID = "background_task_channel_01"
         private const val EXTRA_STARTED_FROM_NOTIFICATION = "$PACKAGE_NAME.started_from_notification"
 
-        private const val NOTIFICATION_ID = 12345678
+        private const val NOTIFICATION_ID = 373737
         const val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 1000
 
         private lateinit var broadcastReceiver: BroadcastReceiver

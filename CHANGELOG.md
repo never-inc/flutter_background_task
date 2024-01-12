@@ -1,4 +1,7 @@
-# 0.0.4
+# 0.0.5
+Added DesiredAccuracy for iOS.
+
+## 0.0.4
 iOS Bug fixed.
 
 ## 0.0.3+1

@@ -17,6 +17,27 @@ enum StatusEventType {
   final String value;
 }
 
+enum DesiredAccuracy {
+  // アプリが完全な精度の位置データを許可されていない場合に使用される精度のレベル
+  reduced('reduced'),
+  // ナビゲーションアプリのための高い精度と追加のセンサーも使用する
+  bestForNavigation('bestForNavigation'),
+  // 最高レベルの精度
+  best('best'),
+  // 10メートル以内の精度
+  nearestTenMeters('nearestTenMeters'),
+  // 100メートル以内の精度
+  hundredMeters('hundredMeters'),
+  // 1キロメートルでの精度
+  kilometer('kilometer'),
+  // キロメートルでの精度
+  threeKilometers('threeKilometers'),
+  ;
+
+  const DesiredAccuracy(this.value);
+  final String value;
+}
+
 class BackgroundTask {
   BackgroundTask(
     this._methodChannel,
@@ -38,10 +59,16 @@ class BackgroundTask {
   final EventChannel _statusEventChannel;
 
   /// Start
-  Future<void> start({double? distanceFilter}) async {
+  Future<void> start({
+    double? distanceFilter,
+    DesiredAccuracy iOSDesiredAccuracy = DesiredAccuracy.bestForNavigation,
+  }) async {
     await _methodChannel.invokeMethod<bool>(
       'start_background_task',
-      {'distanceFilter': distanceFilter},
+      {
+        'distanceFilter': distanceFilter,
+        'iOSDesiredAccuracy': iOSDesiredAccuracy.value,
+      },
     );
   }
 
