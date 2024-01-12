@@ -1,4 +1,7 @@
-# 0.0.3
+# 0.0.3+1
+Updated example.
+
+## 0.0.3
 Added isRunning, status.
 
 ## 0.0.2

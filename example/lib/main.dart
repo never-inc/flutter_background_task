@@ -110,8 +110,9 @@ class _MyAppState extends State<MyApp> {
                   Expanded(
                     child: FilledButton(
                       onPressed: () async {
-                        final status =
-                            await Permission.locationAlways.request();
+                        final status = Platform.isIOS
+                            ? await Permission.locationAlways.request()
+                            : await Permission.location.request();
                         if (!status.isGranted) {
                           setState(() {
                             _bgText = 'Permission is not isGranted.';

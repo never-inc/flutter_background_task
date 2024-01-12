@@ -24,7 +24,9 @@ await BackgroundTask.instance.stop();
 Recommended to use with [permission_handler](https://pub.dev/packages/permission_handler).
 
 ```dart
-final status = await Permission.locationAlways.request();
+final status = Platform.isIOS
+    ? await Permission.locationAlways.request()
+    : await Permission.location.request();
 if (!status.isGranted) {
   return;
 }
