@@ -22,15 +22,16 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 
 /** BackgroundTaskPlugin */
-class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry.RequestPermissionsResultListener, EventChannel.StreamHandler {
+class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry.RequestPermissionsResultListener {
 
   private var context: Context? = null
   private lateinit var channel : MethodChannel
   private var activity: Activity? = null
   private var isStarted: Boolean = false
   private var service: LocationUpdatesService? = null
-  private var eventSink: EventChannel.EventSink? = null
-  private var eventChannel: EventChannel? = null
+  private var bgEventChannel: EventChannel? = null
+  private var statusEventChannel: EventChannel? = null
+
   companion object {
     private val TAG = BackgroundTaskPlugin::class.java.simpleName
     private const val REQUEST_PERMISSIONS_REQUEST_CODE = 34
@@ -55,8 +56,11 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     channel = MethodChannel(messenger, "com.neverjp.background_task/methods")
     channel.setMethodCallHandler(this)
 
-    eventChannel = EventChannel(messenger, "com.neverjp.background_task/events")
-    eventChannel?.setStreamHandler(this)
+    bgEventChannel = EventChannel(messenger, "com.neverjp.background_task/bgEvent")
+    bgEventChannel?.setStreamHandler(BgEventStreamHandler())
+
+    statusEventChannel = EventChannel(messenger, "com.neverjp.background_task/statusEvent")
+    statusEventChannel?.setStreamHandler(StatusEventStreamHandler())
   }
 
   override fun onMethodCall(call: MethodCall, result: Result) {
@@ -64,15 +68,20 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
         "start_background_task" -> {
           val distanceFilter = call.argument<Double>("distanceFilter")
           startLocationService(distanceFilter)
+          result.success(true)
         }
         "stop_background_task" -> {
           stopLocationService()
+          result.success(true)
         }
         "set_android_notification" -> {
           setAndroidNotification(call.argument("title"),call.argument("message"),call.argument("icon"))
+          result.success(true)
+        }
+        "is_running_background_task" -> {
+          result.success(LocationUpdatesService.isStarted)
         }
     }
-    result.success(false)
   }
 
   override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -103,27 +112,28 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   ): Boolean {
     if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
       when (PackageManager.PERMISSION_GRANTED) {
-          grantResults[0] -> service?.requestLocationUpdates()
-          else -> Log.d(TAG, "permission is denied")
+          grantResults[0] -> {
+            service?.requestLocationUpdates()
+            StatusEventStreamHandler.eventSink?.success(
+              StatusEventStreamHandler.StatusType.Permission("enabled").value
+            )
+          }
+          else ->  {
+            StatusEventStreamHandler.eventSink?.success(
+              StatusEventStreamHandler.StatusType.Permission("disabled").value
+            )
+            Log.d(TAG, "permission is denied")
+          }
       }
     }
     return true
-  }
-
-  override fun onListen(arguments: Any?, sink: EventChannel.EventSink?) {
-    eventSink = sink
-  }
-
-  override fun onCancel(arguments: Any?) {
-    eventSink = null
-    eventChannel = null
   }
 
   private val observer = Observer<Pair<Double?, Double?>> {
     val location = HashMap<String, Double?>()
     location["lat"] = it.first
     location["lng"] = it.second
-    eventSink?.success(location)
+    BgEventStreamHandler.eventSink?.success(location)
   }
 
   private fun startLocationService(distanceFilter: Double?) {
@@ -172,5 +182,51 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     if (message != null) LocationUpdatesService.NOTIFICATION_MESSAGE = message
     if (icon != null) LocationUpdatesService.NOTIFICATION_ICON = icon
     service?.updateNotification()
+  }
+}
+
+class BgEventStreamHandler:  EventChannel.StreamHandler  {
+  companion object {
+    var eventSink: EventChannel.EventSink? = null
+  }
+
+  override fun onListen(arguments: Any?, sink: EventChannel.EventSink?) {
+    eventSink = sink
+  }
+
+  override fun onCancel(arguments: Any?) {
+    eventSink = null
+  }
+}
+
+class StatusEventStreamHandler:  EventChannel.StreamHandler  {
+
+  sealed class StatusType {
+    object Start : StatusType()
+    object Stop : StatusType()
+    class Updated(val message: String) : StatusType()
+    class Error(val message: String) : StatusType()
+    class Permission(val message: String) : StatusType()
+
+    val value: String
+      get() = when (this) {
+        is Start -> "start"
+        is Stop -> "stop"
+        is Updated -> "updated,$message"
+        is Error -> "error,$message"
+        is Permission -> "permission,$message"
+      }
+  }
+
+  companion object {
+    var eventSink: EventChannel.EventSink? = null
+  }
+
+  override fun onListen(arguments: Any?, sink: EventChannel.EventSink?) {
+    eventSink = sink
+  }
+
+  override fun onCancel(arguments: Any?) {
+    eventSink = null
   }
 }

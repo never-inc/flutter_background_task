@@ -37,11 +37,12 @@ class LocationUpdatesService: Service() {
     private var fusedLocationClient: FusedLocationProviderClient? = null
     private var fusedLocationCallback: LocationCallback? = null
     private var isGoogleApiAvailable: Boolean = false
-    private var isStarted: Boolean = false
     private var serviceHandler: Handler? = null
 
     companion object {
         private val TAG = LocationUpdatesService::class.java.simpleName
+        var isStarted: Boolean = false
+            private set
 
         private val _locationStatusLiveData = MutableLiveData<Pair<Double?, Double?>>()
         val locationStatusLiveData: LiveData<Pair<Double?, Double?>> = _locationStatusLiveData
@@ -127,6 +128,9 @@ class LocationUpdatesService: Service() {
                     val lat = newLastLocation?.latitude
                     val lng = newLastLocation?.latitude
                     _locationStatusLiveData.value = Pair(lat, lng)
+                    StatusEventStreamHandler.eventSink?.success(
+                        StatusEventStreamHandler.StatusType.Updated("lat:${lat ?: 0} lng:${lng ?: 0}").value
+                    )
                 }
             }
         }
@@ -167,6 +171,9 @@ class LocationUpdatesService: Service() {
                 fusedLocationClient!!.removeLocationUpdates(fusedLocationCallback!!)
             }
             notificationManager!!.cancel(NOTIFICATION_ID)
+            StatusEventStreamHandler.eventSink?.success(
+                StatusEventStreamHandler.StatusType.Stop.value
+            )
         } catch (unlikely: SecurityException) {
             Log.e(TAG, "$unlikely")
         }
@@ -197,6 +204,9 @@ class LocationUpdatesService: Service() {
             notificationManager.notify(NOTIFICATION_ID, notification.build())
             Log.d(TAG, NOTIFICATION_TITLE)
         }
+        StatusEventStreamHandler.eventSink?.success(
+            StatusEventStreamHandler.StatusType.Start.value
+        )
     }
 
     fun removeLocationUpdates() {

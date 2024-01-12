@@ -21,6 +21,16 @@ await BackgroundTask.instance.start();
 await BackgroundTask.instance.stop();
 ```
 
+Recommended to use with [permission_handler](https://pub.dev/packages/permission_handler).
+
+```dart
+final status = await Permission.locationAlways.request();
+if (!status.isGranted) {
+  return;
+}
+await BackgroundTask.instance.start();
+```
+
 ### Setup
 
 pubspec.yaml
@@ -34,11 +44,11 @@ iOS: Info.plist
 
 ```text
 <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-<string>This app needs access to location.</string>
+<string>Used to monitor location in the background and notify to app.</string>
 <key>NSLocationAlwaysUsageDescription</key>
-<string>This app needs access to location.</string>
+<string>Used to monitor location in the background and notify to app.</string>
 <key>NSLocationWhenInUseUsageDescription</key>
-<string>This app needs access to location.</string>
+<string>Used to monitor location in the background and notify to app.</string>
 <key>UIBackgroundModes</key>
 <array>
     <string>fetch</string>
