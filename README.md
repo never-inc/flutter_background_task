@@ -4,6 +4,11 @@
 
 Enable developers to continue processing even when the application transitions to the background, we have created a package that allows processing to continue using location updates.This package was created with reference to [background_location](https://pub.dev/packages/background_location).
 
+Can be used when you want to run the program periodically in the background.
+
+- Monitor and notify the distance walked and steps.
+- Notification of destination arrival.
+
 ## Usage
 
 ```dart

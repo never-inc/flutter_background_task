@@ -11,21 +11,13 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
     private var isRunningEventSink: FlutterEventSink?
     
     enum DesiredAccuracy: String {
-        /// アプリが完全な精度の位置データを許可されていない場合に使用される精度のレベル
         case reduced = "reduced"
-        /// ナビゲーションアプリのための高い精度と追加のセンサーも使用する
         case bestForNavigation = "bestForNavigation"
-        /// 最高レベルの精度
         case best = "best"
-        /// 10メートル以内の精度
         case nearestTenMeters = "nearestTenMeters"
-        /// 100メートル以内の精度
         case hundredMeters = "hundredMeters"
-        /// 1キロメートルでの精度
         case kilometer = "kilometer"
-        /// キロメートルでの精度
         case threeKilometers = "threeKilometers"
-        
         var kCLLocation: CLLocationAccuracy {
             switch (self) {
             case .reduced:

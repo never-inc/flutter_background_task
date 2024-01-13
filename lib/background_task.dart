@@ -18,9 +18,9 @@ enum StatusEventType {
 }
 
 enum DesiredAccuracy {
-  // アプリが完全な精度の位置データを許可されていない場合に使用される精度のレベル
+  // アプリが完全な精度の位置データを許可されていない場合に使用される精度
   reduced('reduced'),
-  // ナビゲーションアプリのための高い精度と追加のセンサーも使用する
+  // ナビゲーションアプリのための高い精度
   bestForNavigation('bestForNavigation'),
   // 最高レベルの精度
   best('best'),
@@ -30,7 +30,7 @@ enum DesiredAccuracy {
   hundredMeters('hundredMeters'),
   // 1キロメートルでの精度
   kilometer('kilometer'),
-  // キロメートルでの精度
+  // 3キロメートルでの精度
   threeKilometers('threeKilometers'),
   ;
 
