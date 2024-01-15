@@ -1,4 +1,7 @@
-# 0.0.5+1
+# 0.0.6
+Removed permissions from AndroidManifest.xml. Please set permissions. Added to README.
+
+## 0.0.5+1
 Updated README.
 
 ## 0.0.5
