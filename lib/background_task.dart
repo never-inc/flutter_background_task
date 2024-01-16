@@ -2,9 +2,13 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+/// `Location` is a type representing latitude and longitude.
 typedef Location = ({double? lat, double? lng});
+
+/// `StatusEvent` is a type representing a status event.
 typedef StatusEvent = ({StatusEventType status, String? message});
 
+/// `StatusEventType` is an enumeration representing the type of status event.
 enum StatusEventType {
   start('start'),
   stop('stop'),
@@ -17,6 +21,8 @@ enum StatusEventType {
   final String value;
 }
 
+/// `DesiredAccuracy` is an enumeration representing
+/// the desired accuracy of location information.
 enum DesiredAccuracy {
   // アプリが完全な精度の位置データを許可されていない場合に使用される精度
   reduced('reduced'),
@@ -38,6 +44,7 @@ enum DesiredAccuracy {
   final String value;
 }
 
+/// `BackgroundTask` is a class managing background tasks.
 class BackgroundTask {
   BackgroundTask(
     this._methodChannel,
@@ -58,7 +65,7 @@ class BackgroundTask {
   final EventChannel _bgEventChannel;
   final EventChannel _statusEventChannel;
 
-  /// Start
+  /// `start` starts the background task.
   Future<void> start({
     double? distanceFilter,
     DesiredAccuracy iOSDesiredAccuracy = DesiredAccuracy.bestForNavigation,
@@ -72,19 +79,19 @@ class BackgroundTask {
     );
   }
 
-  /// Stop
+  /// `stop` stops the background task.
   Future<void> stop() async {
     await _methodChannel.invokeMethod<bool>('stop_background_task');
   }
 
-  /// isRunning
-  Future<bool> isRunning() async {
+  /// `isRunning` returns whether the background task is running or not.
+  Future<bool> get isRunning async {
     final result =
         await _methodChannel.invokeMethod<bool>('is_running_background_task');
     return result ?? false;
   }
 
-  /// Set android notification
+  /// `setAndroidNotification` sets the Android notification.
   Future<void> setAndroidNotification({
     String? title,
     String? message,
@@ -102,7 +109,7 @@ class BackgroundTask {
     }
   }
 
-  /// Stream bg event
+  /// `stream` provides a stream of location information.
   Stream<Location> get stream =>
       _bgEventChannel.receiveBroadcastStream().map((event) {
         final json = event as Map;
@@ -111,7 +118,7 @@ class BackgroundTask {
         return (lat: lat, lng: lng);
       }).asBroadcastStream();
 
-  /// Stream status event
+  /// `status` provides a stream of status events.
   Stream<StatusEvent> get status =>
       _statusEventChannel.receiveBroadcastStream().map((event) {
         final value = (event as String).split(',');

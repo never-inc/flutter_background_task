@@ -133,8 +133,7 @@ class _MyAppState extends State<MyApp> {
                 builder: (context) {
                   return FilledButton(
                     onPressed: () async {
-                      final isRunning =
-                          await BackgroundTask.instance.isRunning();
+                      final isRunning = await BackgroundTask.instance.isRunning;
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(

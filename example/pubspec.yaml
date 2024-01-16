@@ -6,19 +6,21 @@ environment:
   sdk: '>=3.2.3 <4.0.0'
 
 dependencies:
-  flutter:
-    sdk: flutter
-
   background_task:
     path: ../
 
   cupertino_icons: ^1.0.2
+
+  flutter:
+    sdk: flutter
+
   permission_handler: ^11.1.0
 
 dev_dependencies:
-  integration_test:
-    sdk: flutter
   flutter_test:
+    sdk: flutter
+
+  integration_test:
     sdk: flutter
 
   pedantic_mono:
