@@ -1,4 +1,7 @@
-# 0.0.7
+# 0.0.8
+Fixed Android bug.
+
+## 0.0.7
 Fixed LICENCE.
 
 ## 0.0.6

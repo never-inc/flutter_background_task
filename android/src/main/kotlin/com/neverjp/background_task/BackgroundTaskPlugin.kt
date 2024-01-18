@@ -149,12 +149,16 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     return true
   }
 
-  private val observer = Observer<Pair<Double?, Double?>> {
+  private val locationObserver = Observer<Pair<Double?, Double?>> {
     val location = HashMap<String, Double?>()
     location["lat"] = it.first
     location["lng"] = it.second
     BgEventStreamHandler.eventSink?.success(location)
     channel.invokeMethod("backgroundHandler", location)
+  }
+
+  private val statusObserver = Observer<String> {
+    StatusEventStreamHandler.eventSink?.success(it)
   }
 
   private fun startLocationService(distanceFilter: Double?) {
@@ -165,13 +169,15 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
       val intent = Intent(context, LocationUpdatesService::class.java)
       intent.putExtra("distanceFilter", distanceFilter)
       context!!.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-      LocationUpdatesService.locationStatusLiveData.observeForever(observer)
+      LocationUpdatesService.locationLiveData.observeForever(locationObserver)
+      LocationUpdatesService.statusLiveData.observeForever(statusObserver)
     }
   }
 
   private fun stopLocationService() {
     service?.removeLocationUpdates()
-    LocationUpdatesService.locationStatusLiveData.removeObserver(observer)
+    LocationUpdatesService.locationLiveData.removeObserver(locationObserver)
+    LocationUpdatesService.statusLiveData.removeObserver(statusObserver)
     if (isStarted) {
       context!!.unbindService(serviceConnection)
       isStarted = false
