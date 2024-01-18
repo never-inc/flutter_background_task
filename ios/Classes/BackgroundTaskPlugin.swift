@@ -24,8 +24,6 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
     static var locationManager: CLLocationManager?
     static var channel: FlutterMethodChannel?
     static var isUpdatingLocation = false
-    private var bgEventSink: FlutterEventSink?
-    private var isRunningEventSink: FlutterEventSink?
     
     enum DesiredAccuracy: String {
         case reduced = "reduced"
@@ -67,6 +65,9 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
         channel.setMethodCallHandler(instance.handle)
         BackgroundTaskPlugin.channel = channel
         
+    
+        
+        
         let bgEventChannel = FlutterEventChannel(name: "com.neverjp.background_task/bgEvent", binaryMessenger: registrar.messenger())
         bgEventChannel.setStreamHandler(BgEventStreamHandler())
         
@@ -94,21 +95,21 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             locationManager.delegate = self
             locationManager.startUpdatingLocation()
             
-            BackgroundTaskPlugin.locationManager = locationManager
-            BackgroundTaskPlugin.isUpdatingLocation = true
+            Self.locationManager = locationManager
+            Self.isUpdatingLocation = true
             StatusEventStreamHandler.eventSink?(
                 StatusEventStreamHandler.StatusType.start(message: "\(desiredAccuracy)").value
             )
             result(true)
         } else if (call.method == "stop_background_task") {
-            BackgroundTaskPlugin.locationManager?.stopUpdatingLocation()
-            BackgroundTaskPlugin.isUpdatingLocation = false
+            Self.locationManager?.stopUpdatingLocation()
+            Self.isUpdatingLocation = false
             StatusEventStreamHandler.eventSink?(
                 StatusEventStreamHandler.StatusType.stop.value
             )
             result(true)
         } else if (call.method == "is_running_background_task") {
-            result(BackgroundTaskPlugin.isUpdatingLocation)
+            result(Self.isUpdatingLocation)
         }
     }
 
@@ -123,6 +124,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
         let lat = locations.last?.coordinate.latitude
         let lng = locations.last?.coordinate.longitude
         let location = ["lat": lat, "lng": lng] as [String : Double?]
+        Self.channel?.invokeMethod("backgroundHandler", arguments: location)
         BgEventStreamHandler.eventSink?(location)
         StatusEventStreamHandler.eventSink?(
             StatusEventStreamHandler.StatusType.updated(message: "lat:\(lat ?? 0) lng:\(lng ?? 0)").value

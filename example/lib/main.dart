@@ -5,7 +5,13 @@ import 'package:background_task/background_task.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+@pragma('vm:entry-point')
+Future<void> backgroundHandler(Location location) async {
+  debugPrint('backgroundHandler $location');
+}
+
 void main() {
+  BackgroundTask.instance.setBackgroundHandler(backgroundHandler);
   runApp(const MyApp());
 }
 
@@ -138,6 +144,12 @@ class _MyAppState extends State<MyApp> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('isRunning: $isRunning'),
+                            action: SnackBarAction(
+                              label: 'close',
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).clearSnackBars();
+                              },
+                            ),
                           ),
                         );
                       }

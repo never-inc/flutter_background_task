@@ -8,6 +8,8 @@ typedef Location = ({double? lat, double? lng});
 /// `StatusEvent` is a type representing a status event.
 typedef StatusEvent = ({StatusEventType status, String? message});
 
+typedef BackgroundHandler = Future<void> Function(Location);
+
 /// `StatusEventType` is an enumeration representing the type of status event.
 enum StatusEventType {
   start('start'),
@@ -55,6 +57,8 @@ class BackgroundTask {
   /// Get instance
   static BackgroundTask get instance => _instance;
 
+  static BackgroundHandler? _backgroundHandler;
+
   static final BackgroundTask _instance = BackgroundTask(
     const MethodChannel('com.neverjp.background_task/methods'),
     const EventChannel('com.neverjp.background_task/bgEvent'),
@@ -65,11 +69,25 @@ class BackgroundTask {
   final EventChannel _bgEventChannel;
   final EventChannel _statusEventChannel;
 
+  Future<void> setBackgroundHandler(BackgroundHandler handler) async {
+    _backgroundHandler = handler;
+  }
+
   /// `start` starts the background task.
   Future<void> start({
     double? distanceFilter,
     DesiredAccuracy iOSDesiredAccuracy = DesiredAccuracy.bestForNavigation,
   }) async {
+    _methodChannel.setMethodCallHandler((call) async {
+      if (call.method == 'backgroundHandler') {
+        final json = call.arguments as Map;
+        final lat = json['lat'] as double?;
+        final lng = json['lng'] as double?;
+        await _backgroundHandler?.call((lat: lat, lng: lng));
+      }
+      return 'OK';
+    });
+
     await _methodChannel.invokeMethod<bool>(
       'start_background_task',
       {
