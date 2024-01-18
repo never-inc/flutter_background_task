@@ -48,11 +48,11 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   private var service: LocationUpdatesService? = null
   private var bgEventChannel: EventChannel? = null
   private var statusEventChannel: EventChannel? = null
-  private var isEnabledEvenIfKilled = false
 
   companion object {
     private val TAG = BackgroundTaskPlugin::class.java.simpleName
     private const val REQUEST_PERMISSIONS_REQUEST_CODE = 34
+    var isEnabledEvenIfKilled = false
   }
 
   private val serviceConnection = object : ServiceConnection {
@@ -90,8 +90,8 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
           result.success(true)
         }
         "stop_background_task" -> {
-          isEnabledEvenIfKilled = false
           stopLocationService()
+          isEnabledEvenIfKilled = false
           result.success(true)
         }
         "set_android_notification" -> {
