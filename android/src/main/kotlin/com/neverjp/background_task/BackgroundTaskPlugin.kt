@@ -48,6 +48,7 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   private var service: LocationUpdatesService? = null
   private var bgEventChannel: EventChannel? = null
   private var statusEventChannel: EventChannel? = null
+  private var isEnabledEvenIfKilled = false
 
   companion object {
     private val TAG = BackgroundTaskPlugin::class.java.simpleName
@@ -84,10 +85,12 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     when (call.method) {
         "start_background_task" -> {
           val distanceFilter = call.argument<Double>("distanceFilter")
+          isEnabledEvenIfKilled = call.argument<Boolean>("isEnabledEvenIfKilled") ?: false
           startLocationService(distanceFilter)
           result.success(true)
         }
         "stop_background_task" -> {
+          isEnabledEvenIfKilled = false
           stopLocationService()
           result.success(true)
         }
@@ -151,6 +154,7 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     location["lat"] = it.first
     location["lng"] = it.second
     BgEventStreamHandler.eventSink?.success(location)
+    channel.invokeMethod("backgroundHandler", location)
   }
 
   private fun startLocationService(distanceFilter: Double?) {

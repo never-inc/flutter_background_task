@@ -227,7 +227,11 @@ class LocationUpdatesService: Service() {
     }
 
     fun removeLocationUpdates() {
-        stopForeground(true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            stopForeground(true)
+        }
     }
 
     private fun getMainActivityClass(context: Context): Class<*>? {
