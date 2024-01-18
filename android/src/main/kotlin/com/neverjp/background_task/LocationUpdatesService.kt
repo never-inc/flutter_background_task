@@ -61,8 +61,11 @@ class LocationUpdatesService: Service() {
         var isStarted: Boolean = false
             private set
 
-        private val _locationStatusLiveData = MutableLiveData<Pair<Double?, Double?>>()
-        val locationStatusLiveData: LiveData<Pair<Double?, Double?>> = _locationStatusLiveData
+        private val _locationLiveData = MutableLiveData<Pair<Double?, Double?>>()
+        val locationLiveData: LiveData<Pair<Double?, Double?>> = _locationLiveData
+
+        private val _statusLiveData = MutableLiveData<String>()
+        val statusLiveData: LiveData<String> = _statusLiveData
 
         var NOTIFICATION_TITLE = "Background task is running"
         var NOTIFICATION_MESSAGE = "Background task is running"
@@ -143,11 +146,9 @@ class LocationUpdatesService: Service() {
                     super.onLocationResult(locationResult)
                     val newLastLocation = locationResult.lastLocation
                     val lat = newLastLocation?.latitude
-                    val lng = newLastLocation?.latitude
-                    _locationStatusLiveData.value = Pair(lat, lng)
-                    StatusEventStreamHandler.eventSink?.success(
-                        StatusEventStreamHandler.StatusType.Updated("lat:${lat ?: 0} lng:${lng ?: 0}").value
-                    )
+                    val lng = newLastLocation?.longitude
+                    _locationLiveData.value = Pair(lat, lng)
+                    _statusLiveData.value = StatusEventStreamHandler.StatusType.Updated("lat:${lat ?: 0} lng:${lng ?: 0}").value
                 }
             }
         }
@@ -188,9 +189,7 @@ class LocationUpdatesService: Service() {
                 fusedLocationClient!!.removeLocationUpdates(fusedLocationCallback!!)
             }
             notificationManager!!.cancel(NOTIFICATION_ID)
-            StatusEventStreamHandler.eventSink?.success(
-                StatusEventStreamHandler.StatusType.Stop.value
-            )
+            _statusLiveData.value =    StatusEventStreamHandler.StatusType.Stop.value
         } catch (unlikely: SecurityException) {
             Log.e(TAG, "$unlikely")
         }
@@ -221,13 +220,16 @@ class LocationUpdatesService: Service() {
             notificationManager.notify(NOTIFICATION_ID, notification.build())
             Log.d(TAG, NOTIFICATION_TITLE)
         }
-        StatusEventStreamHandler.eventSink?.success(
-            StatusEventStreamHandler.StatusType.Start.value
-        )
+        _statusLiveData.value =  StatusEventStreamHandler.StatusType.Start.value
     }
 
     fun removeLocationUpdates() {
-        stopForeground(true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
     }
 
     private fun getMainActivityClass(context: Context): Class<*>? {
