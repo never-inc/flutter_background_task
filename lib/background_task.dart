@@ -8,6 +8,7 @@ typedef Location = ({double? lat, double? lng});
 /// `StatusEvent` is a type representing a status event.
 typedef StatusEvent = ({StatusEventType status, String? message});
 
+/// `BackgroundHandler` is a type for a function that updates location.
 typedef BackgroundHandler = Future<void> Function(Location);
 
 /// `StatusEventType` is an enumeration representing the type of status event.
@@ -46,7 +47,7 @@ enum DesiredAccuracy {
   final String value;
 }
 
-/// `BackgroundTask` is a class managing background tasks.
+/// `BackgroundTask` is a class that manages background tasks.
 class BackgroundTask {
   BackgroundTask(
     this._methodChannel,
@@ -69,13 +70,20 @@ class BackgroundTask {
   final EventChannel _bgEventChannel;
   final EventChannel _statusEventChannel;
 
+  /// `setBackgroundHandler` provides a function of location information.
   Future<void> setBackgroundHandler(BackgroundHandler handler) async {
     _backgroundHandler = handler;
   }
 
   /// `start` starts the background task.
+  /// `distanceFilter` - the minimum distance (in meters) a device must move
+  /// horizontally before an update event is generated.
+  /// `isEnabledEvenIfKilled` - if set to true, the location service will
+  /// not stop even after the app is killed.
+  /// `iOSDesiredAccuracy` - the desired accuracy of the location data.
   Future<void> start({
     double? distanceFilter,
+    bool isEnabledEvenIfKilled = false,
     DesiredAccuracy iOSDesiredAccuracy = DesiredAccuracy.bestForNavigation,
   }) async {
     _methodChannel.setMethodCallHandler((call) async {
@@ -92,6 +100,7 @@ class BackgroundTask {
       'start_background_task',
       {
         'distanceFilter': distanceFilter,
+        'isEnabledEvenIfKilled': isEnabledEvenIfKilled,
         'iOSDesiredAccuracy': iOSDesiredAccuracy.value,
       },
     );

@@ -24,6 +24,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
     static var locationManager: CLLocationManager?
     static var channel: FlutterMethodChannel?
     static var isUpdatingLocation = false
+    static var isEnabledEvenIfKilled = false
     
     enum DesiredAccuracy: String {
         case reduced = "reduced"
@@ -59,14 +60,12 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = BackgroundTaskPlugin()
+        registrar.addApplicationDelegate(instance)
         
         let channel = FlutterMethodChannel(name: "com.neverjp.background_task/methods", binaryMessenger: registrar.messenger())
         registrar.addMethodCallDelegate(instance, channel: channel)
         channel.setMethodCallHandler(instance.handle)
         BackgroundTaskPlugin.channel = channel
-        
-    
-        
         
         let bgEventChannel = FlutterEventChannel(name: "com.neverjp.background_task/bgEvent", binaryMessenger: registrar.messenger())
         bgEventChannel.setStreamHandler(BgEventStreamHandler())
@@ -88,28 +87,64 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             let locationManager = CLLocationManager()
             locationManager.allowsBackgroundLocationUpdates = true
             locationManager.showsBackgroundLocationIndicator = true
-            locationManager.desiredAccuracy = desiredAccuracy.kCLLocation
             locationManager.pausesLocationUpdatesAutomatically = false
-            locationManager.distanceFilter = distanceFilter ?? kCLDistanceFilterNone
-            locationManager.requestAlwaysAuthorization()
+            locationManager.desiredAccuracy = desiredAccuracy.kCLLocation
+            locationManager.distanceFilter = distanceFilter ?? 0
             locationManager.delegate = self
-            locationManager.startUpdatingLocation()
-            
             Self.locationManager = locationManager
+            Self.locationManager?.requestAlwaysAuthorization()
+            Self.locationManager?.startUpdatingLocation()
+            
+            Self.isEnabledEvenIfKilled = (args?["isEnabledEvenIfKilled"] as? Bool) ?? false
+            if (Self.isEnabledEvenIfKilled) {
+                Self.locationManager?.startMonitoringSignificantLocationChanges()
+            }
             Self.isUpdatingLocation = true
+            
             StatusEventStreamHandler.eventSink?(
                 StatusEventStreamHandler.StatusType.start(message: "\(desiredAccuracy)").value
             )
+            UserDefaultsRepository.instance.save(distanceFilter: locationManager.distanceFilter, desiredAccuracy: desiredAccuracy)
             result(true)
         } else if (call.method == "stop_background_task") {
+            if Self.isEnabledEvenIfKilled {
+                Self.locationManager?.stopMonitoringSignificantLocationChanges()
+                Self.isEnabledEvenIfKilled = false
+            }
             Self.locationManager?.stopUpdatingLocation()
             Self.isUpdatingLocation = false
             StatusEventStreamHandler.eventSink?(
                 StatusEventStreamHandler.StatusType.stop.value
             )
+            UserDefaultsRepository.instance.remove()
             result(true)
         } else if (call.method == "is_running_background_task") {
             result(Self.isUpdatingLocation)
+        }
+    }
+    
+    public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
+        if (launchOptions[UIApplication.LaunchOptionsKey.location] != nil) {
+            let locationManager = CLLocationManager()
+            locationManager.allowsBackgroundLocationUpdates = true
+            locationManager.showsBackgroundLocationIndicator = true
+            locationManager.pausesLocationUpdatesAutomatically = false
+            let (distanceFilter, desiredAccuracy) = UserDefaultsRepository.instance.fetch()
+            locationManager.distanceFilter = distanceFilter
+            locationManager.desiredAccuracy = desiredAccuracy.kCLLocation
+            locationManager.delegate = self
+            Self.locationManager = locationManager
+            Self.locationManager?.startMonitoringSignificantLocationChanges()
+            Self.locationManager?.startUpdatingLocation()
+            Self.isUpdatingLocation = true
+            Self.isEnabledEvenIfKilled = true
+        }
+        return true
+    }
+    
+    public func applicationWillTerminate(_ application: UIApplication) {
+        if (Self.isEnabledEvenIfKilled) {
+            Self.locationManager?.startMonitoringSignificantLocationChanges()
         }
     }
 
