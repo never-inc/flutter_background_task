@@ -7,12 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 @pragma('vm:entry-point')
-Future<void> backgroundHandler(Location location) async {
-  final value = 'bg: $location, ${DateTime.now()}';
-  debugPrint(value);
+void backgroundHandler(Location data) {
+  debugPrint('backgroundHandler: ${DateTime.now()}, $data');
 }
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   BackgroundTask.instance.setBackgroundHandler(backgroundHandler);
   runApp(const MyApp());
 }
@@ -37,7 +37,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
 
     _bgDisposer = BackgroundTask.instance.stream.listen((event) {
-      final message = '${event.lat}, ${event.lng}\n${DateTime.now()}';
+      final message = '${DateTime.now()}: ${event.lat}, ${event.lng}';
       debugPrint(message);
       setState(() {
         _bgText = message;

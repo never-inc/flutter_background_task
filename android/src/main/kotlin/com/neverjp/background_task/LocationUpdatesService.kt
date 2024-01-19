@@ -45,6 +45,13 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.neverjp.background_task.lib.ChannelName
+import com.neverjp.background_task.lib.StatusEventStreamHandler
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.dart.DartExecutor
+import io.flutter.embedding.engine.loader.FlutterLoader
+import io.flutter.plugin.common.MethodChannel
+import io.flutter.view.FlutterCallbackInformation
 
 class LocationUpdatesService: Service() {
 
@@ -55,17 +62,17 @@ class LocationUpdatesService: Service() {
     private var fusedLocationCallback: LocationCallback? = null
     private var isGoogleApiAvailable: Boolean = false
     private var serviceHandler: Handler? = null
+    private var methodChannel: MethodChannel? = null
 
     companion object {
         private val TAG = LocationUpdatesService::class.java.simpleName
-        var isStarted: Boolean = false
+        var isRunning: Boolean = false
             private set
 
         private val _locationLiveData = MutableLiveData<Pair<Double?, Double?>>()
         val locationLiveData: LiveData<Pair<Double?, Double?>> = _locationLiveData
 
-        private val _statusLiveData = MutableLiveData<String>()
-        val statusLiveData: LiveData<String> = _statusLiveData
+        val statusLiveData = MutableLiveData<String>()
 
         var NOTIFICATION_TITLE = "Background task is running"
         var NOTIFICATION_MESSAGE = "Background task is running"
@@ -80,6 +87,13 @@ class LocationUpdatesService: Service() {
 
         private lateinit var broadcastReceiver: BroadcastReceiver
         private const val STOP_SERVICE = "stop_service"
+
+        const val distanceFilterKey = "distanceFilter"
+        const val callbackDispatcherRawHandleKey = "callbackDispatcherRawHandle"
+        const val callbackHandlerRawHandleKey = "callbackHandlerRawHandle"
+
+        const val PREF_FILE_NAME = "BACKGROUND_TASK"
+        const val CALLBACK_DISPATCHER_HANDLE_KEY = "CALLBACK_DISPATCHER_HANDLE_KEY"
     }
 
     private val notification: NotificationCompat.Builder
@@ -101,11 +115,9 @@ class LocationUpdatesService: Service() {
                 .setWhen(System.currentTimeMillis())
                 .setStyle(NotificationCompat.BigTextStyle().bigText(NOTIFICATION_MESSAGE))
                 .setContentIntent(pendingIntent)
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 builder.setChannelId(CHANNEL_ID)
             }
-
             return builder
         }
 
@@ -125,12 +137,6 @@ class LocationUpdatesService: Service() {
         }.build()
 
     override fun onBind(intent: Intent?): IBinder {
-        val distanceFilter = intent?.getDoubleExtra("distanceFilter", 0.0)
-        locationRequest = if (distanceFilter != null) {
-            createRequest(distanceFilter.toFloat())
-        } else {
-            createRequest(0.0.toFloat())
-        }
         return binder
     }
 
@@ -147,8 +153,19 @@ class LocationUpdatesService: Service() {
                     val newLastLocation = locationResult.lastLocation
                     val lat = newLastLocation?.latitude
                     val lng = newLastLocation?.longitude
+                    val value = "lat:${lat ?: 0} lng:${lng ?: 0}"
                     _locationLiveData.value = Pair(lat, lng)
-                    _statusLiveData.value = StatusEventStreamHandler.StatusType.Updated("lat:${lat ?: 0} lng:${lng ?: 0}").value
+                    statusLiveData.value = StatusEventStreamHandler.StatusType.Updated(value).value
+
+                    val pref = applicationContext.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
+                    val callbackHandlerRawHandle = pref.getLong(callbackHandlerRawHandleKey, 0)
+                    val args = HashMap<String, Any?>()
+                    args["callbackHandlerRawHandle"] = callbackHandlerRawHandle
+                    args["lat"] = lat ?: 0
+                    args["lng"] = lng ?: 0
+                    methodChannel?.invokeMethod("background_handler", args)
+//                    Log.d(TAG, value)
+                    updateNotification()
                 }
             }
         }
@@ -175,28 +192,70 @@ class LocationUpdatesService: Service() {
 
         val filter = IntentFilter()
         filter.addAction(STOP_SERVICE)
-        registerReceiver(broadcastReceiver, filter)
-
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(broadcastReceiver, filter, RECEIVER_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(broadcastReceiver, filter)
+        }
         updateNotification()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        isRunning = true
+        statusLiveData.value = StatusEventStreamHandler.StatusType.Start.value
+
+        intent?.getLongExtra(CALLBACK_DISPATCHER_HANDLE_KEY, 0)?.also { callbackHandle ->
+            Log.d(TAG, "onStartCommand callbackHandle: $callbackHandle")
+            // ネイティブシステムを起動
+            val flutterLoader = FlutterLoader().apply {
+                startInitialization(applicationContext)
+                ensureInitializationComplete(applicationContext, arrayOf())
+            }
+            // コールバック関数を取得
+            val callbackInfo = FlutterCallbackInformation.lookupCallbackInformation(callbackHandle)
+            val dartCallback = DartExecutor.DartCallback(
+                applicationContext.assets,
+                flutterLoader.findAppBundlePath(),
+                callbackInfo
+            )
+            // コールバックを実行
+            val engine = FlutterEngine(applicationContext).apply {
+                dartExecutor.executeDartCallback(dartCallback)
+            }
+
+            // メソッドチャンネル設定
+            methodChannel = MethodChannel(engine.dartExecutor, ChannelName.METHODS.value)
+        }
+
+        val distanceFilter = intent?.getDoubleExtra(distanceFilterKey, 0.0)
+        locationRequest = if (distanceFilter != null) {
+            createRequest(distanceFilter.toFloat())
+        } else {
+            createRequest(0.0.toFloat())
+        }
+        requestLocationUpdates()
+        return START_REDELIVER_INTENT
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        isStarted = false
+        isRunning = false
         unregisterReceiver(broadcastReceiver)
         try {
             if (isGoogleApiAvailable) {
                 fusedLocationClient!!.removeLocationUpdates(fusedLocationCallback!!)
             }
             notificationManager!!.cancel(NOTIFICATION_ID)
-            _statusLiveData.value =    StatusEventStreamHandler.StatusType.Stop.value
+            statusLiveData.value = StatusEventStreamHandler.StatusType.Stop.value
         } catch (unlikely: SecurityException) {
             Log.e(TAG, "$unlikely")
         }
     }
 
     @SuppressLint("MissingPermission")
-    fun requestLocationUpdates() {
+    private fun requestLocationUpdates() {
         try {
             if (isGoogleApiAvailable && locationRequest != null) {
                 fusedLocationClient!!.requestLocationUpdates(
@@ -210,20 +269,17 @@ class LocationUpdatesService: Service() {
         }
     }
 
-    fun updateNotification() {
-        if (!isStarted) {
-            isStarted = true
+    private fun updateNotification() {
+        if (!isRunning) {
             startForeground(NOTIFICATION_ID, notification.build())
         } else {
             val notificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.notify(NOTIFICATION_ID, notification.build())
-            Log.d(TAG, NOTIFICATION_TITLE)
         }
-        _statusLiveData.value =  StatusEventStreamHandler.StatusType.Start.value
     }
 
-    fun removeLocationUpdates() {
+    private fun removeLocationUpdates() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {
