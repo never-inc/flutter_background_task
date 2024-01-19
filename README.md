@@ -8,18 +8,19 @@ Can be used when you want to run the program periodically in the background.
 
 - Monitor and notify the distance walked and steps.
 - Notification of destination arrival.
+- Tracking location information (sending it to a server).
 
 ## Usage
 
 ```dart
 // Monitor notifications of background processes.
+// However, Cannot be used while the app is in task kill.
 BackgroundTask.instance.stream.listen((event) {
-    // Implement the process you want to run in the background.
-    // ex) Check health data.
+  // Implement the process you want to run in the background.
+  // ex) Check health data.
 });
 
 // Start background processing with location updates.
-// Android only: Start Foreground service. If you want to show foreground service notifications, please execute a notification permission request before start.
 await BackgroundTask.instance.start();
 
 // Stop background processing and location updates.
@@ -36,6 +37,37 @@ if (!status.isGranted) {
   return;
 }
 await BackgroundTask.instance.start();
+```
+
+This is an implementation for receiving updates even when the task is task-killed.
+
+```dart
+// Define callback handler at the top level.
+@pragma('vm:entry-point')
+void backgroundHandler(Location data) {
+  // Implement the process you want to run in the background.
+  // ex) Check health data.
+}
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  BackgroundTask.instance.setBackgroundHandler(backgroundHandler); // 👈 Set callback handler.
+  runApp(const MyApp());
+}
+```
+
+To get the latest location information in a task-killed status, set the app to Always.
+
+![ios](./img/ios_location_permission_for_task_kill.png)
+![android](./img/android_location_permission_for_task_kill.png)
+
+
+This is an implementation for when you want to stop using the application when it is killed.
+
+```dart
+await BackgroundTask.instance.start(
+  isEnabledEvenIfKilled: false,
+);
 ```
 
 ### Setup
