@@ -9,6 +9,10 @@ import 'package:permission_handler/permission_handler.dart';
 @pragma('vm:entry-point')
 void backgroundHandler(Location data) {
   debugPrint('backgroundHandler: ${DateTime.now()}, $data');
+  // Future(() async {
+  //   final res = await Dio().get<dynamic>('https://api.github.com/users');
+  //   debugPrint('res: ${res.data}');
+  // });
 }
 
 void main() {
