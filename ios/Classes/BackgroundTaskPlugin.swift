@@ -207,7 +207,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
         let handle = UserDefaultsRepository.instance.fetchCallbackDispatcherRawHandle()
         if let info = FlutterCallbackCache.lookupCallbackInformation(Int64(handle)) {
             Self.dispatchEngine = FlutterEngine(
-               name: Bundle.main.bundleIdentifier ?? "",
+               name: Bundle.main.bundleIdentifier ?? "background_task",
                project: nil,
                allowHeadlessExecution: true
             )

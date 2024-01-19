@@ -26,6 +26,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.os.Binder
 import android.os.Build
 import android.os.Handler
@@ -64,6 +65,9 @@ class LocationUpdatesService: Service() {
     private var serviceHandler: Handler? = null
     private var methodChannel: MethodChannel? = null
 
+    private val pref: SharedPreferences
+        get() = applicationContext.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
+
     companion object {
         private val TAG = LocationUpdatesService::class.java.simpleName
         var isRunning: Boolean = false
@@ -93,7 +97,6 @@ class LocationUpdatesService: Service() {
         const val callbackHandlerRawHandleKey = "callbackHandlerRawHandle"
 
         const val PREF_FILE_NAME = "BACKGROUND_TASK"
-        const val CALLBACK_DISPATCHER_HANDLE_KEY = "CALLBACK_DISPATCHER_HANDLE_KEY"
     }
 
     private val notification: NotificationCompat.Builder
@@ -157,13 +160,15 @@ class LocationUpdatesService: Service() {
                     _locationLiveData.value = Pair(lat, lng)
                     statusLiveData.value = StatusEventStreamHandler.StatusType.Updated(value).value
 
-                    val pref = applicationContext.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
-                    val callbackHandlerRawHandle = pref.getLong(callbackHandlerRawHandleKey, 0)
-                    val args = HashMap<String, Any?>()
-                    args["callbackHandlerRawHandle"] = callbackHandlerRawHandle
-                    args["lat"] = lat ?: 0
-                    args["lng"] = lng ?: 0
-                    methodChannel?.invokeMethod("background_handler", args)
+                    pref.getLong(callbackHandlerRawHandleKey, 0).also {
+                        if (it != 0.toLong()) {
+                            val args = HashMap<String, Any?>()
+                            args["callbackHandlerRawHandle"] = it
+                            args["lat"] = lat ?: 0
+                            args["lng"] = lng ?: 0
+                            methodChannel?.invokeMethod("background_handler", args)
+                        }
+                    }
 //                    Log.d(TAG, value)
                     updateNotification()
                 }
@@ -205,9 +210,12 @@ class LocationUpdatesService: Service() {
         super.onStartCommand(intent, flags, startId)
         isRunning = true
         statusLiveData.value = StatusEventStreamHandler.StatusType.Start.value
-
-        intent?.getLongExtra(CALLBACK_DISPATCHER_HANDLE_KEY, 0)?.also { callbackHandle ->
+        pref.getLong(callbackDispatcherRawHandleKey, 0).also { callbackHandle ->
             Log.d(TAG, "onStartCommand callbackHandle: $callbackHandle")
+            if (callbackHandle == 0.toLong()) {
+                return@also
+            }
+
             // ネイティブシステムを起動
             val flutterLoader = FlutterLoader().apply {
                 startInitialization(applicationContext)
@@ -229,12 +237,8 @@ class LocationUpdatesService: Service() {
             methodChannel = MethodChannel(engine.dartExecutor, ChannelName.METHODS.value)
         }
 
-        val distanceFilter = intent?.getDoubleExtra(distanceFilterKey, 0.0)
-        locationRequest = if (distanceFilter != null) {
-            createRequest(distanceFilter.toFloat())
-        } else {
-            createRequest(0.0.toFloat())
-        }
+        val distanceFilter = pref.getFloat(distanceFilterKey, 0.0.toFloat())
+        locationRequest = createRequest(distanceFilter)
         requestLocationUpdates()
         return START_REDELIVER_INTENT
     }

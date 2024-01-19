@@ -21,6 +21,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.util.Log
 import androidx.core.app.ActivityCompat
@@ -46,8 +47,11 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   private var activity: Activity? = null
   private var bgEventChannel: EventChannel? = null
   private var statusEventChannel: EventChannel? = null
-  private var callbackDispatcherRawHandle: Long? = null
+  private var dispatcherRawHandle: Long? = null
+  private var handlerRawHandle: Long? = null
   private var isEnabledEvenIfKilled = false
+  private val pref: SharedPreferences
+    get() =  context!!.getSharedPreferences(LocationUpdatesService.PREF_FILE_NAME, Context.MODE_PRIVATE)
 
   companion object {
     private val TAG = BackgroundTaskPlugin::class.java.simpleName
@@ -72,6 +76,16 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
         "start_background_task" -> {
           val distanceFilter = call.argument<Double>(LocationUpdatesService.distanceFilterKey)
           isEnabledEvenIfKilled = call.argument<Boolean>("isEnabledEvenIfKilled") ?: false
+
+          pref.edit().apply {
+            remove(LocationUpdatesService.callbackDispatcherRawHandleKey)
+            remove(LocationUpdatesService.callbackHandlerRawHandleKey)
+            if (dispatcherRawHandle != null && handlerRawHandle != null) {
+              putLong(LocationUpdatesService.callbackDispatcherRawHandleKey, dispatcherRawHandle ?: 0)
+              putLong(LocationUpdatesService.callbackHandlerRawHandleKey, handlerRawHandle ?: 0)
+            }
+          }.apply()
+
           startLocationService(distanceFilter)
           result.success(true)
         }
@@ -91,13 +105,9 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
           channel.invokeMethod("notify_callback_dispatcher", null)
         }
         "set_background_handler" -> {
-          callbackDispatcherRawHandle = call.argument<Long>(LocationUpdatesService.callbackDispatcherRawHandleKey)
-          val callbackHandlerRawHandle = call.argument<Long>(LocationUpdatesService.callbackHandlerRawHandleKey)
-
-          val pref = context!!.getSharedPreferences(LocationUpdatesService.PREF_FILE_NAME, Context.MODE_PRIVATE)
-          pref.edit().putLong(LocationUpdatesService.callbackHandlerRawHandleKey, callbackHandlerRawHandle ?: 0).apply()
-
-          Log.d(TAG, "registered $callbackDispatcherRawHandle, $callbackHandlerRawHandle")
+          dispatcherRawHandle = call.argument<Long>(LocationUpdatesService.callbackDispatcherRawHandleKey)
+          handlerRawHandle = call.argument<Long>(LocationUpdatesService.callbackHandlerRawHandleKey)
+          Log.d(TAG, "registered ${call.arguments}")
           result.success(true)
         }
     }
@@ -174,8 +184,9 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     LocationUpdatesService.locationLiveData.observeForever(locationObserver)
     LocationUpdatesService.statusLiveData.observeForever(statusObserver)
 
-    intent.putExtra(LocationUpdatesService.distanceFilterKey, distanceFilter)
-    intent.putExtra(LocationUpdatesService.CALLBACK_DISPATCHER_HANDLE_KEY, callbackDispatcherRawHandle)
+    pref.edit().apply {
+      putFloat(LocationUpdatesService.distanceFilterKey, distanceFilter?.toFloat() ?: 0.0.toFloat())
+    }.apply()
     context!!.startService(intent)
   }
 
