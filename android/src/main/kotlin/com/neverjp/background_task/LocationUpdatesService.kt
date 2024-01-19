@@ -114,13 +114,16 @@ class LocationUpdatesService: Service() {
                 .setContentTitle(NOTIFICATION_TITLE)
                 .setOngoing(true)
                 .setSound(null)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setVibrate(null)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setSmallIcon(resources.getIdentifier(NOTIFICATION_ICON, "mipmap", packageName))
                 .setWhen(System.currentTimeMillis())
-                .setStyle(NotificationCompat.BigTextStyle().bigText(NOTIFICATION_MESSAGE))
                 .setContentIntent(pendingIntent)
+                .setContentText(NOTIFICATION_MESSAGE)
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 builder.setChannelId(CHANNEL_ID)
+
             }
             return builder
         }
@@ -182,9 +185,10 @@ class LocationUpdatesService: Service() {
 
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Application Name"
-            val mChannel = NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_DEFAULT)
+            val name = NOTIFICATION_TITLE
+            val mChannel = NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW)
             mChannel.setSound(null, null)
+            mChannel.enableVibration(false)
             notificationManager!!.createNotificationChannel(mChannel)
         }
 
