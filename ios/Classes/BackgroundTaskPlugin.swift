@@ -26,6 +26,9 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
     static var isUpdatingLocation = false
     static var isEnabledEvenIfKilled = false
     
+    static var dispatchEngine: FlutterEngine?
+    static var dispatchChannel: FlutterMethodChannel?
+    
     enum DesiredAccuracy: String {
         case reduced = "reduced"
         case bestForNavigation = "bestForNavigation"
@@ -76,6 +79,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if (call.method == "start_background_task") {
+            setDispatchEngine()
             let args = call.arguments as? Dictionary<String, Any>
             let distanceFilter = args?["distanceFilter"] as? Double
             let desiredAccuracy: DesiredAccuracy
@@ -104,7 +108,10 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             StatusEventStreamHandler.eventSink?(
                 StatusEventStreamHandler.StatusType.start(message: "\(desiredAccuracy)").value
             )
-            UserDefaultsRepository.instance.save(distanceFilter: locationManager.distanceFilter, desiredAccuracy: desiredAccuracy)
+            UserDefaultsRepository.instance.save(
+                distanceFilter: locationManager.distanceFilter,
+                desiredAccuracy: desiredAccuracy
+            )
             result(true)
         } else if (call.method == "stop_background_task") {
             if Self.isEnabledEvenIfKilled {
@@ -116,15 +123,26 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             StatusEventStreamHandler.eventSink?(
                 StatusEventStreamHandler.StatusType.stop.value
             )
-            UserDefaultsRepository.instance.remove()
             result(true)
         } else if (call.method == "is_running_background_task") {
             result(Self.isUpdatingLocation)
+        } else if (call.method == "set_background_handler") {
+            let args = call.arguments as? Dictionary<String, Any>
+            if let dispatcherRawHandle = args?["callbackDispatcherRawHandle"] as? Int, 
+                let handlerRawHandle = args?["callbackHandlerRawHandle"] as? Int {
+                UserDefaultsRepository.instance.save(
+                    callbackDispatcherRawHandle: dispatcherRawHandle,
+                    callbackHandlerRawHandle: handlerRawHandle
+                )
+                debugPrint("registered \(dispatcherRawHandle), \(handlerRawHandle)")
+            }
+            result(true)
         }
     }
     
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
         if (launchOptions[UIApplication.LaunchOptionsKey.location] != nil) {
+            setDispatchEngine()
             let locationManager = CLLocationManager()
             locationManager.allowsBackgroundLocationUpdates = true
             locationManager.showsBackgroundLocationIndicator = true
@@ -159,11 +177,19 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
         let lat = locations.last?.coordinate.latitude
         let lng = locations.last?.coordinate.longitude
         let location = ["lat": lat, "lng": lng] as [String : Double?]
-        Self.channel?.invokeMethod("backgroundHandler", arguments: location)
+        
         BgEventStreamHandler.eventSink?(location)
         StatusEventStreamHandler.eventSink?(
             StatusEventStreamHandler.StatusType.updated(message: "lat:\(lat ?? 0) lng:\(lng ?? 0)").value
         )
+        
+        let callbackHandlerRawHandle = UserDefaultsRepository.instance.fetchCallbackHandlerRawHandle()
+        let data = [
+            "callbackHandlerRawHandle": callbackHandlerRawHandle,
+            "lat": lat,
+            "lng": lng
+        ] as [String : Any?]
+        Self.dispatchChannel?.invokeMethod("background_handler", arguments: data)
     }
     
     public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
@@ -172,56 +198,34 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             StatusEventStreamHandler.StatusType.error(message: error.localizedDescription).value
         )
     }
-}
-
-final class BgEventStreamHandler: NSObject, FlutterStreamHandler {
     
-    static var eventSink: FlutterEventSink?
-    
-    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        Self.eventSink = events
-        return nil
-    }
-    
-    func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        Self.eventSink = nil
-        return nil
-    }
-}
-
-final class StatusEventStreamHandler: NSObject, FlutterStreamHandler {
-    
-    static var eventSink: FlutterEventSink?
-    
-    enum StatusType {
-        case start(message: String)
-        case stop
-        case updated(message: String)
-        case error(message: String)
-        case permission(message: String)
-        var value: String {
-            switch (self) {
-            case .start(message: let message):
-                return "start,\(message)"
-            case .stop:
-                return "stop"
-            case .updated(message: let message):
-                return "updated,\(message)"
-            case .error(message: let message):
-                return "error,\(message)"
-            case .permission(message: let message):
-                return "permission,\(message)"
+    private func setDispatchEngine() {
+        let handle = UserDefaultsRepository.instance.fetchCallbackDispatcherRawHandle()
+        if let info = FlutterCallbackCache.lookupCallbackInformation(Int64(handle)) {
+            Self.dispatchEngine = FlutterEngine(
+               name: Bundle.main.bundleIdentifier ?? "",
+               project: nil,
+               allowHeadlessExecution: true
+            )
+            guard let dispatchEngine = Self.dispatchEngine else {
+                return
+            }
+            dispatchEngine.run(withEntrypoint: info.callbackName, libraryURI: info.callbackLibraryPath)
+            
+            Self.dispatchChannel = FlutterMethodChannel(
+                name: "com.neverjp.background_task/methods",
+                binaryMessenger: Self.dispatchEngine!.binaryMessenger
+            )
+            guard let dispatchChannel = Self.dispatchChannel else {
+                return
+            }
+            
+            dispatchChannel.setMethodCallHandler { call, result in
+                if (call.method == "callback_channel_initialized") {
+                    dispatchChannel.invokeMethod("notify_callback_dispatcher", arguments: nil)
+                    result(true)
+                }
             }
         }
-    }
-    
-    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        Self.eventSink = events
-        return nil
-    }
-    
-    func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        Self.eventSink = nil
-        return nil
     }
 }

@@ -60,7 +60,6 @@ class _MyAppState extends State<MyApp> {
     _statusDisposer = BackgroundTask.instance.status.listen((event) {
       final message =
           'status: ${event.status.value}, message: ${event.message}';
-      debugPrint(message);
       setState(() {
         _statusText = message;
       });

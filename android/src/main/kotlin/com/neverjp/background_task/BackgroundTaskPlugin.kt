@@ -88,12 +88,7 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
           result.success(LocationUpdatesService.isRunning)
         }
         "callback_channel_initialized" -> {
-          val pref = context!!.getSharedPreferences(LocationUpdatesService.PREF_FILE_NAME, Context.MODE_PRIVATE)
-          val callbackHandlerRawHandle = pref.getLong("callbackHandlerRawHandle", 0)
-
-          val args = HashMap<String, Long?>()
-          args["callbackHandlerRawHandle"] = callbackHandlerRawHandle
-          channel.invokeMethod("notify_callback_dispatcher", args)
+          channel.invokeMethod("notify_callback_dispatcher", null)
         }
         "set_background_handler" -> {
           callbackDispatcherRawHandle = call.argument<Long>(LocationUpdatesService.callbackDispatcherRawHandleKey)
