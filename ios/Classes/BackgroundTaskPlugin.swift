@@ -218,7 +218,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             
             Self.dispatchChannel = FlutterMethodChannel(
                 name: "com.neverjp.background_task/methods",
-                binaryMessenger: Self.dispatchEngine!.binaryMessenger
+                binaryMessenger: dispatchEngine.binaryMessenger
             )
             guard let dispatchChannel = Self.dispatchChannel else {
                 return

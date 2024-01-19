@@ -49,7 +49,8 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   private var statusEventChannel: EventChannel? = null
   private var dispatcherRawHandle: Long? = null
   private var handlerRawHandle: Long? = null
-  private var isEnabledEvenIfKilled = false
+  private val isEnabledEvenIfKilled: Boolean
+    get() = pref.getBoolean(LocationUpdatesService.isEnabledEvenIfKilledKey, false)
   private val pref: SharedPreferences
     get() =  context!!.getSharedPreferences(LocationUpdatesService.PREF_FILE_NAME, Context.MODE_PRIVATE)
 
@@ -75,7 +76,7 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     when (call.method) {
         "start_background_task" -> {
           val distanceFilter = call.argument<Double>(LocationUpdatesService.distanceFilterKey)
-          isEnabledEvenIfKilled = call.argument<Boolean>("isEnabledEvenIfKilled") ?: false
+          val isEnabledEvenIfKilled = call.argument<Boolean>("isEnabledEvenIfKilled") ?: false
 
           pref.edit().apply {
             remove(LocationUpdatesService.callbackDispatcherRawHandleKey)
@@ -84,14 +85,16 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
               putLong(LocationUpdatesService.callbackDispatcherRawHandleKey, dispatcherRawHandle ?: 0)
               putLong(LocationUpdatesService.callbackHandlerRawHandleKey, handlerRawHandle ?: 0)
             }
+            putFloat(LocationUpdatesService.distanceFilterKey, distanceFilter?.toFloat() ?: 0.0.toFloat())
+            putBoolean(LocationUpdatesService.isEnabledEvenIfKilledKey, isEnabledEvenIfKilled)
           }.apply()
 
-          startLocationService(distanceFilter)
+          startLocationService()
           result.success(true)
         }
         "stop_background_task" -> {
           stopLocationService()
-          isEnabledEvenIfKilled = false
+          pref.edit().putBoolean(LocationUpdatesService.isEnabledEvenIfKilledKey, false).apply()
           result.success(true)
         }
         "set_android_notification" -> {
@@ -173,7 +176,7 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     StatusEventStreamHandler.eventSink?.success(it)
   }
 
-  private fun startLocationService(distanceFilter: Double?) {
+  private fun startLocationService() {
     if (!checkPermissions()) {
       requestPermissions()
     }
@@ -184,9 +187,6 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     LocationUpdatesService.locationLiveData.observeForever(locationObserver)
     LocationUpdatesService.statusLiveData.observeForever(statusObserver)
 
-    pref.edit().apply {
-      putFloat(LocationUpdatesService.distanceFilterKey, distanceFilter?.toFloat() ?: 0.0.toFloat())
-    }.apply()
     context!!.startService(intent)
   }
 

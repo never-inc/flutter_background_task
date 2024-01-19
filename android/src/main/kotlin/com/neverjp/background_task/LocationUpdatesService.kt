@@ -92,6 +92,7 @@ class LocationUpdatesService: Service() {
         private lateinit var broadcastReceiver: BroadcastReceiver
         private const val STOP_SERVICE = "stop_service"
 
+        const val isEnabledEvenIfKilledKey = "isEnabledEvenIfKilled"
         const val distanceFilterKey = "distanceFilter"
         const val callbackDispatcherRawHandleKey = "callbackDispatcherRawHandle"
         const val callbackHandlerRawHandleKey = "callbackHandlerRawHandle"
