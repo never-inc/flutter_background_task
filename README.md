@@ -27,18 +27,6 @@ await BackgroundTask.instance.start();
 await BackgroundTask.instance.stop();
 ```
 
-Recommended to use with [permission_handler](https://pub.dev/packages/permission_handler).
-
-```dart
-final status = Platform.isIOS
-    ? await Permission.locationAlways.request()
-    : await Permission.location.request();
-if (!status.isGranted) {
-  return;
-}
-await BackgroundTask.instance.start();
-```
-
 This is an implementation for receiving updates even when the task is task-killed.
 
 ```dart
@@ -61,13 +49,24 @@ To get the latest location information in a task-killed status, set the app to A
 ![ios](./img/ios_location_permission_for_task_kill.png)
 ![android](./img/android_location_permission_for_task_kill.png)
 
-
 This is an implementation for when you want to stop using the application when it is killed.
 
 ```dart
 await BackgroundTask.instance.start(
   isEnabledEvenIfKilled: false,
 );
+```
+
+Recommended to use with [permission_handler](https://pub.dev/packages/permission_handler).
+
+```dart
+final status = Platform.isIOS
+    ? await Permission.locationAlways.request()
+    : await Permission.location.request();
+if (!status.isGranted) {
+  return;
+}
+await BackgroundTask.instance.start();
 ```
 
 ### Setup
