@@ -11,7 +11,7 @@ void callbackDispatcher() {
     ..setMethodCallHandler((call) async {
       if (call.method == 'notify_callback_dispatcher') {
         // for 2 way handshake
-        debugPrint('notify_callback_dispatcher');
+        // debugPrint('notify_callback_dispatcher');
       } else if (call.method == 'background_handler') {
         final json = call.arguments as Map;
         final handle = json['callbackHandlerRawHandle'] as int?;

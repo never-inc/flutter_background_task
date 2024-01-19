@@ -28,6 +28,8 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
     
     static var dispatchEngine: FlutterEngine?
     static var dispatchChannel: FlutterMethodChannel?
+    static var dispatcherRawHandle: Int?
+    static var handlerRawHandle: Int?
     
     enum DesiredAccuracy: String {
         case reduced = "reduced"
@@ -79,6 +81,13 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if (call.method == "start_background_task") {
+            UserDefaultsRepository.instance.removeAll()
+            if let dispatcherRawHandle = Self.dispatcherRawHandle, let handlerRawHandle = Self.handlerRawHandle {
+                UserDefaultsRepository.instance.save(
+                    callbackDispatcherRawHandle: dispatcherRawHandle,
+                    callbackHandlerRawHandle: handlerRawHandle
+                )
+            }
             setDispatchEngine()
             let args = call.arguments as? Dictionary<String, Any>
             let distanceFilter = args?["distanceFilter"] as? Double
@@ -128,14 +137,9 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             result(Self.isUpdatingLocation)
         } else if (call.method == "set_background_handler") {
             let args = call.arguments as? Dictionary<String, Any>
-            if let dispatcherRawHandle = args?["callbackDispatcherRawHandle"] as? Int, 
-                let handlerRawHandle = args?["callbackHandlerRawHandle"] as? Int {
-                UserDefaultsRepository.instance.save(
-                    callbackDispatcherRawHandle: dispatcherRawHandle,
-                    callbackHandlerRawHandle: handlerRawHandle
-                )
-                debugPrint("registered \(dispatcherRawHandle), \(handlerRawHandle)")
-            }
+            Self.dispatcherRawHandle = args?["callbackDispatcherRawHandle"] as? Int
+            Self.handlerRawHandle = args?["callbackHandlerRawHandle"] as? Int
+            debugPrint("registered \(String(describing: args))")
             result(true)
         }
     }
