@@ -26,6 +26,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.os.Binder
 import android.os.Build
 import android.os.Handler
@@ -45,6 +46,13 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.neverjp.background_task.lib.ChannelName
+import com.neverjp.background_task.lib.StatusEventStreamHandler
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.dart.DartExecutor
+import io.flutter.embedding.engine.loader.FlutterLoader
+import io.flutter.plugin.common.MethodChannel
+import io.flutter.view.FlutterCallbackInformation
 
 class LocationUpdatesService: Service() {
 
@@ -55,17 +63,20 @@ class LocationUpdatesService: Service() {
     private var fusedLocationCallback: LocationCallback? = null
     private var isGoogleApiAvailable: Boolean = false
     private var serviceHandler: Handler? = null
+    private var methodChannel: MethodChannel? = null
+
+    private val pref: SharedPreferences
+        get() = applicationContext.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
 
     companion object {
         private val TAG = LocationUpdatesService::class.java.simpleName
-        var isStarted: Boolean = false
+        var isRunning: Boolean = false
             private set
 
         private val _locationLiveData = MutableLiveData<Pair<Double?, Double?>>()
         val locationLiveData: LiveData<Pair<Double?, Double?>> = _locationLiveData
 
-        private val _statusLiveData = MutableLiveData<String>()
-        val statusLiveData: LiveData<String> = _statusLiveData
+        val statusLiveData = MutableLiveData<String>()
 
         var NOTIFICATION_TITLE = "Background task is running"
         var NOTIFICATION_MESSAGE = "Background task is running"
@@ -80,6 +91,13 @@ class LocationUpdatesService: Service() {
 
         private lateinit var broadcastReceiver: BroadcastReceiver
         private const val STOP_SERVICE = "stop_service"
+
+        const val isEnabledEvenIfKilledKey = "isEnabledEvenIfKilled"
+        const val distanceFilterKey = "distanceFilter"
+        const val callbackDispatcherRawHandleKey = "callbackDispatcherRawHandle"
+        const val callbackHandlerRawHandleKey = "callbackHandlerRawHandle"
+
+        const val PREF_FILE_NAME = "BACKGROUND_TASK"
     }
 
     private val notification: NotificationCompat.Builder
@@ -96,16 +114,17 @@ class LocationUpdatesService: Service() {
                 .setContentTitle(NOTIFICATION_TITLE)
                 .setOngoing(true)
                 .setSound(null)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setVibrate(null)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setSmallIcon(resources.getIdentifier(NOTIFICATION_ICON, "mipmap", packageName))
                 .setWhen(System.currentTimeMillis())
-                .setStyle(NotificationCompat.BigTextStyle().bigText(NOTIFICATION_MESSAGE))
                 .setContentIntent(pendingIntent)
+                .setContentText(NOTIFICATION_MESSAGE)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 builder.setChannelId(CHANNEL_ID)
-            }
 
+            }
             return builder
         }
 
@@ -124,16 +143,6 @@ class LocationUpdatesService: Service() {
             setWaitForAccurateLocation(true)
         }.build()
 
-    override fun onBind(intent: Intent?): IBinder {
-        val distanceFilter = intent?.getDoubleExtra("distanceFilter", 0.0)
-        locationRequest = if (distanceFilter != null) {
-            createRequest(distanceFilter.toFloat())
-        } else {
-            createRequest(0.0.toFloat())
-        }
-        return binder
-    }
-
     override fun onCreate() {
         val googleAPIAvailability = GoogleApiAvailability.getInstance()
             .isGooglePlayServicesAvailable(applicationContext)
@@ -147,8 +156,21 @@ class LocationUpdatesService: Service() {
                     val newLastLocation = locationResult.lastLocation
                     val lat = newLastLocation?.latitude
                     val lng = newLastLocation?.longitude
+                    val value = "lat:${lat ?: 0} lng:${lng ?: 0}"
                     _locationLiveData.value = Pair(lat, lng)
-                    _statusLiveData.value = StatusEventStreamHandler.StatusType.Updated("lat:${lat ?: 0} lng:${lng ?: 0}").value
+                    statusLiveData.value = StatusEventStreamHandler.StatusType.Updated(value).value
+
+                    pref.getLong(callbackHandlerRawHandleKey, 0).also {
+                        if (it != 0.toLong()) {
+                            val args = HashMap<String, Any?>()
+                            args["callbackHandlerRawHandle"] = it
+                            args["lat"] = lat ?: 0
+                            args["lng"] = lng ?: 0
+                            methodChannel?.invokeMethod("background_handler", args)
+                        }
+                    }
+//                    Log.d(TAG, value)
+                    updateNotification()
                 }
             }
         }
@@ -159,9 +181,10 @@ class LocationUpdatesService: Service() {
 
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Application Name"
-            val mChannel = NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_DEFAULT)
+            val name = NOTIFICATION_TITLE
+            val mChannel = NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW)
             mChannel.setSound(null, null)
+            mChannel.enableVibration(false)
             notificationManager!!.createNotificationChannel(mChannel)
         }
 
@@ -175,28 +198,75 @@ class LocationUpdatesService: Service() {
 
         val filter = IntentFilter()
         filter.addAction(STOP_SERVICE)
-        registerReceiver(broadcastReceiver, filter)
-
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(broadcastReceiver, filter, RECEIVER_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(broadcastReceiver, filter)
+        }
         updateNotification()
+
+        pref.getLong(callbackDispatcherRawHandleKey, 0).also { callbackHandle ->
+            Log.d(TAG, "onStartCommand callbackHandle: $callbackHandle")
+            if (callbackHandle == 0.toLong()) {
+                return@also
+            }
+
+            // ネイティブシステムを起動
+            val flutterLoader = FlutterLoader().apply {
+                startInitialization(applicationContext)
+                ensureInitializationComplete(applicationContext, arrayOf())
+            }
+            // コールバック関数を取得
+            val callbackInfo = FlutterCallbackInformation.lookupCallbackInformation(callbackHandle)
+            val dartCallback = DartExecutor.DartCallback(
+                applicationContext.assets,
+                flutterLoader.findAppBundlePath(),
+                callbackInfo
+            )
+            // コールバックを実行
+            val engine = FlutterEngine(applicationContext).apply {
+                dartExecutor.executeDartCallback(dartCallback)
+            }
+
+            // メソッドチャンネル設定
+            methodChannel = MethodChannel(engine.dartExecutor, ChannelName.METHODS.value)
+        }
+
+        val distanceFilter = pref.getFloat(distanceFilterKey, 0.0.toFloat())
+        locationRequest = createRequest(distanceFilter)
+        requestLocationUpdates()
+
+        isRunning = true
+        statusLiveData.value = StatusEventStreamHandler.StatusType.Start.value
+    }
+
+    override fun onBind(intent: Intent?): IBinder {
+        return binder
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        return START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        isStarted = false
+        isRunning = false
         unregisterReceiver(broadcastReceiver)
         try {
             if (isGoogleApiAvailable) {
                 fusedLocationClient!!.removeLocationUpdates(fusedLocationCallback!!)
             }
             notificationManager!!.cancel(NOTIFICATION_ID)
-            _statusLiveData.value =    StatusEventStreamHandler.StatusType.Stop.value
+            statusLiveData.value = StatusEventStreamHandler.StatusType.Stop.value
         } catch (unlikely: SecurityException) {
             Log.e(TAG, "$unlikely")
         }
     }
 
     @SuppressLint("MissingPermission")
-    fun requestLocationUpdates() {
+    private fun requestLocationUpdates() {
         try {
             if (isGoogleApiAvailable && locationRequest != null) {
                 fusedLocationClient!!.requestLocationUpdates(
@@ -210,20 +280,17 @@ class LocationUpdatesService: Service() {
         }
     }
 
-    fun updateNotification() {
-        if (!isStarted) {
-            isStarted = true
+    private fun updateNotification() {
+        if (!isRunning) {
             startForeground(NOTIFICATION_ID, notification.build())
         } else {
             val notificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.notify(NOTIFICATION_ID, notification.build())
-            Log.d(TAG, NOTIFICATION_TITLE)
         }
-        _statusLiveData.value =  StatusEventStreamHandler.StatusType.Start.value
     }
 
-    fun removeLocationUpdates() {
+    private fun removeLocationUpdates() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {

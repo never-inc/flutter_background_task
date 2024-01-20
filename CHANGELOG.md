@@ -1,4 +1,7 @@
-# 0.0.8
+# 0.1.0
+Enabled to work even if the app task is killed.
+
+## 0.0.8
 Fixed Android bug.
 
 ## 0.0.7

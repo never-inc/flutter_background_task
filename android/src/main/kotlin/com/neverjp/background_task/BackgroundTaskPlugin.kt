@@ -19,15 +19,16 @@ package com.neverjp.background_task
 
 import android.Manifest
 import android.app.Activity
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.ServiceConnection
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.os.IBinder
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
+import com.neverjp.background_task.lib.BgEventStreamHandler
+import com.neverjp.background_task.lib.ChannelName
+import com.neverjp.background_task.lib.StatusEventStreamHandler
 import io.flutter.plugin.common.PluginRegistry
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -44,51 +45,56 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   private var context: Context? = null
   private lateinit var channel : MethodChannel
   private var activity: Activity? = null
-  private var isStarted: Boolean = false
-  private var service: LocationUpdatesService? = null
   private var bgEventChannel: EventChannel? = null
   private var statusEventChannel: EventChannel? = null
+  private var dispatcherRawHandle: Long? = null
+  private var handlerRawHandle: Long? = null
+  private val isEnabledEvenIfKilled: Boolean
+    get() = pref.getBoolean(LocationUpdatesService.isEnabledEvenIfKilledKey, false)
+  private val pref: SharedPreferences
+    get() =  context!!.getSharedPreferences(LocationUpdatesService.PREF_FILE_NAME, Context.MODE_PRIVATE)
 
   companion object {
     private val TAG = BackgroundTaskPlugin::class.java.simpleName
     private const val REQUEST_PERMISSIONS_REQUEST_CODE = 34
   }
 
-  private val serviceConnection = object : ServiceConnection {
-    override fun onServiceConnected(name: ComponentName, service: IBinder) {
-      isStarted = true
-      val binder = service as LocationUpdatesService.LocalBinder
-      this@BackgroundTaskPlugin.service = binder.service
-      requestLocation()
-    }
-
-    override fun onServiceDisconnected(name: ComponentName) {
-      service = null
-    }
-  }
-
   override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     val messenger = flutterPluginBinding.binaryMessenger
     context = flutterPluginBinding.applicationContext
-    channel = MethodChannel(messenger, "com.neverjp.background_task/methods")
+    channel = MethodChannel(messenger, ChannelName.METHODS.value)
     channel.setMethodCallHandler(this)
 
-    bgEventChannel = EventChannel(messenger, "com.neverjp.background_task/bgEvent")
+    bgEventChannel = EventChannel(messenger, ChannelName.BG_EVENT.value)
     bgEventChannel?.setStreamHandler(BgEventStreamHandler())
 
-    statusEventChannel = EventChannel(messenger, "com.neverjp.background_task/statusEvent")
+    statusEventChannel = EventChannel(messenger, ChannelName.STATUS_EVENT.value)
     statusEventChannel?.setStreamHandler(StatusEventStreamHandler())
   }
 
   override fun onMethodCall(call: MethodCall, result: Result) {
     when (call.method) {
         "start_background_task" -> {
-          val distanceFilter = call.argument<Double>("distanceFilter")
-          startLocationService(distanceFilter)
+          val distanceFilter = call.argument<Double>(LocationUpdatesService.distanceFilterKey)
+          val isEnabledEvenIfKilled = call.argument<Boolean>("isEnabledEvenIfKilled") ?: false
+
+          pref.edit().apply {
+            remove(LocationUpdatesService.callbackDispatcherRawHandleKey)
+            remove(LocationUpdatesService.callbackHandlerRawHandleKey)
+            if (dispatcherRawHandle != null && handlerRawHandle != null) {
+              putLong(LocationUpdatesService.callbackDispatcherRawHandleKey, dispatcherRawHandle ?: 0)
+              putLong(LocationUpdatesService.callbackHandlerRawHandleKey, handlerRawHandle ?: 0)
+            }
+            putFloat(LocationUpdatesService.distanceFilterKey, distanceFilter?.toFloat() ?: 0.0.toFloat())
+            putBoolean(LocationUpdatesService.isEnabledEvenIfKilledKey, isEnabledEvenIfKilled)
+          }.apply()
+
+          startLocationService()
           result.success(true)
         }
         "stop_background_task" -> {
           stopLocationService()
+          pref.edit().putBoolean(LocationUpdatesService.isEnabledEvenIfKilledKey, false).apply()
           result.success(true)
         }
         "set_android_notification" -> {
@@ -96,7 +102,16 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
           result.success(true)
         }
         "is_running_background_task" -> {
-          result.success(LocationUpdatesService.isStarted)
+          result.success(LocationUpdatesService.isRunning)
+        }
+        "callback_channel_initialized" -> {
+          channel.invokeMethod("notify_callback_dispatcher", null)
+        }
+        "set_background_handler" -> {
+          dispatcherRawHandle = call.argument<Long>(LocationUpdatesService.callbackDispatcherRawHandleKey)
+          handlerRawHandle = call.argument<Long>(LocationUpdatesService.callbackHandlerRawHandleKey)
+          Log.d(TAG, "registered ${call.arguments}")
+          result.success(true)
         }
     }
   }
@@ -119,7 +134,12 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   }
 
   override fun onDetachedFromActivity() {
-    stopLocationService()
+    if (isEnabledEvenIfKilled) {
+      LocationUpdatesService.locationLiveData.removeObserver(locationObserver)
+      LocationUpdatesService.statusLiveData.removeObserver(statusObserver)
+    } else {
+      stopLocationService()
+    }
   }
 
   override fun onRequestPermissionsResult(
@@ -130,7 +150,6 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
       when (PackageManager.PERMISSION_GRANTED) {
           grantResults[0] -> {
-            service?.requestLocationUpdates()
             StatusEventStreamHandler.eventSink?.success(
               StatusEventStreamHandler.StatusType.Permission("enabled").value
             )
@@ -147,43 +166,39 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
   }
 
   private val locationObserver = Observer<Pair<Double?, Double?>> {
-    val location = HashMap<String, Double?>()
-    location["lat"] = it.first
-    location["lng"] = it.second
-    BgEventStreamHandler.eventSink?.success(location)
+    val data = HashMap<String, Any?>()
+    data["lat"] = it.first
+    data["lng"] = it.second
+    BgEventStreamHandler.eventSink?.success(data)
   }
 
   private val statusObserver = Observer<String> {
     StatusEventStreamHandler.eventSink?.success(it)
   }
 
-  private fun startLocationService(distanceFilter: Double?) {
-    if (!isStarted) {
-      if (!checkPermissions()) {
-        requestPermissions()
-      }
-      val intent = Intent(context, LocationUpdatesService::class.java)
-      intent.putExtra("distanceFilter", distanceFilter)
-      context!!.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-      LocationUpdatesService.locationLiveData.observeForever(locationObserver)
-      LocationUpdatesService.statusLiveData.observeForever(statusObserver)
+  private fun startLocationService() {
+    if (!checkPermissions()) {
+      requestPermissions()
     }
+
+    val intent = Intent(context, LocationUpdatesService::class.java)
+    context!!.stopService(intent)
+
+    LocationUpdatesService.locationLiveData.observeForever(locationObserver)
+    LocationUpdatesService.statusLiveData.observeForever(statusObserver)
+
+    context!!.startService(intent)
   }
 
   private fun stopLocationService() {
-    service?.removeLocationUpdates()
+    if (!LocationUpdatesService.isRunning) {
+      return
+    }
+    val intent = Intent(context, LocationUpdatesService::class.java)
+    context!!.stopService(intent)
+    LocationUpdatesService.statusLiveData.value = StatusEventStreamHandler.StatusType.Stop.value
     LocationUpdatesService.locationLiveData.removeObserver(locationObserver)
     LocationUpdatesService.statusLiveData.removeObserver(statusObserver)
-    if (isStarted) {
-      context!!.unbindService(serviceConnection)
-      isStarted = false
-    }
-  }
-
-  private fun requestLocation() {
-    if (checkPermissions()) {
-      service?.requestLocationUpdates()
-    }
   }
 
   private fun checkPermissions(): Boolean {
@@ -200,56 +215,12 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
       }
     }
   }
+
   private fun setAndroidNotification(title: String?, message: String?, icon: String?) {
     if (title != null) LocationUpdatesService.NOTIFICATION_TITLE = title
     if (message != null) LocationUpdatesService.NOTIFICATION_MESSAGE = message
     if (icon != null) LocationUpdatesService.NOTIFICATION_ICON = icon
-    service?.updateNotification()
   }
 }
 
-class BgEventStreamHandler:  EventChannel.StreamHandler  {
-  companion object {
-    var eventSink: EventChannel.EventSink? = null
-  }
 
-  override fun onListen(arguments: Any?, sink: EventChannel.EventSink?) {
-    eventSink = sink
-  }
-
-  override fun onCancel(arguments: Any?) {
-    eventSink = null
-  }
-}
-
-class StatusEventStreamHandler:  EventChannel.StreamHandler  {
-
-  sealed class StatusType {
-    object Start : StatusType()
-    object Stop : StatusType()
-    class Updated(val message: String) : StatusType()
-    class Error(val message: String) : StatusType()
-    class Permission(val message: String) : StatusType()
-
-    val value: String
-      get() = when (this) {
-        is Start -> "start"
-        is Stop -> "stop"
-        is Updated -> "updated,$message"
-        is Error -> "error,$message"
-        is Permission -> "permission,$message"
-      }
-  }
-
-  companion object {
-    var eventSink: EventChannel.EventSink? = null
-  }
-
-  override fun onListen(arguments: Any?, sink: EventChannel.EventSink?) {
-    eventSink = sink
-  }
-
-  override fun onCancel(arguments: Any?) {
-    eventSink = null
-  }
-}
