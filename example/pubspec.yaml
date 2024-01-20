@@ -5,6 +5,8 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 environment:
   sdk: '>=3.2.3 <4.0.0'
 
+isar_version: &isar_version 3.1.0
+
 dependencies:
   background_task:
     path: ../
@@ -16,15 +18,30 @@ dependencies:
   flutter:
     sdk: flutter
 
+  flutter_localizations:
+    sdk: flutter
+
+  intl:
+
+  isar: *isar_version
+  isar_flutter_libs: *isar_version
+
+  path_provider: ^2.1.2
+
   permission_handler: ^11.1.0
 
   shared_preferences: ^2.2.2
+
 dev_dependencies:
+  build_runner:
+
   flutter_test:
     sdk: flutter
 
   integration_test:
     sdk: flutter
+
+  isar_generator: *isar_version
 
   pedantic_mono:
 

@@ -2,33 +2,55 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:background_task/background_task.dart';
+import 'package:background_task_example/log_page.dart';
+import 'package:background_task_example/model/isar_repository.dart';
+import 'package:background_task_example/model/lat_lng.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 @pragma('vm:entry-point')
 void backgroundHandler(Location data) {
   debugPrint('backgroundHandler: ${DateTime.now()}, $data');
-  // Future(() async {
-  //   final res = await Dio().get<dynamic>('https://api.github.com/users');
-  //   debugPrint('res: ${res.data}');
-  // });
+  Future(() async {
+    await IsarRepository.configure();
+    IsarRepository.isar.writeTxnSync(() {
+      final latLng = LatLng()
+        ..lat = data.lat ?? 0
+        ..lng = data.lng ?? 0;
+      IsarRepository.isar.latLngs.putSync(latLng);
+    });
+  });
 }
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  BackgroundTask.instance.setBackgroundHandler(backgroundHandler);
+  await BackgroundTask.instance.setBackgroundHandler(backgroundHandler);
+  await IsarRepository.configure();
+  await initializeDateFormatting('ja_JP');
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      home: MainPage(),
+    );
+  }
 }
 
-class _MyAppState extends State<MyApp> {
+class MainPage extends StatefulWidget {
+  const MainPage({super.key});
+
+  @override
+  State<MainPage> createState() => _MainPageState();
+}
+
+class _MainPageState extends State<MainPage> {
   String _bgText = 'no start';
   String _statusText = 'status';
   bool _isEnabledEvenIfKilled = true;
@@ -79,138 +101,144 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Plugin example app'),
-        ),
-        body: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _bgText,
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    _statusText,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        persistentFooterAlignment: AlignmentDirectional.center,
-        persistentFooterButtons: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    flex: 2,
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          const TextSpan(
-                            text: 'Monitor even if killed',
-                          ),
-                          WidgetSpan(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 2),
-                              child: CupertinoSwitch(
-                                value: _isEnabledEvenIfKilled,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _isEnabledEvenIfKilled = value;
-                                  });
-                                },
-                              ),
-                            ),
-                            alignment: PlaceholderAlignment.middle,
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                  Flexible(
-                    child: FilledButton(
-                      onPressed: () async {
-                        final status = Platform.isIOS
-                            ? await Permission.locationAlways.request()
-                            : await Permission.location.request();
-                        if (!status.isGranted) {
-                          setState(() {
-                            _bgText = 'Permission is not isGranted.';
-                          });
-                          return;
-                        }
-                        await BackgroundTask.instance.start(
-                          isEnabledEvenIfKilled: _isEnabledEvenIfKilled,
-                        );
-                        setState(() {
-                          _bgText = 'start';
-                        });
-                      },
-                      child: const Text('Start'),
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: FilledButton(
-                      onPressed: () async {
-                        await BackgroundTask.instance.stop();
-                        setState(() {
-                          _bgText = 'stop';
-                        });
-                      },
-                      child: const Text('Stop'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Builder(
-                      builder: (context) {
-                        return FilledButton(
-                          onPressed: () async {
-                            final isRunning =
-                                await BackgroundTask.instance.isRunning;
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('isRunning: $isRunning'),
-                                  action: SnackBarAction(
-                                    label: 'close',
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context)
-                                          .clearSnackBars();
-                                    },
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                          child: const Text('isRunning'),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Plugin example app'),
+        actions: [
+          IconButton(
+            onPressed: () {
+              LogPage.show(context);
+            },
+            icon: const Icon(Icons.edit_location_alt),
+            iconSize: 32,
           ),
         ],
       ),
+      body: Center(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _bgText,
+                  textAlign: TextAlign.center,
+                ),
+                Text(
+                  _statusText,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      persistentFooterAlignment: AlignmentDirectional.center,
+      persistentFooterButtons: [
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  flex: 2,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: 'Monitor even if killed',
+                        ),
+                        WidgetSpan(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: CupertinoSwitch(
+                              value: _isEnabledEvenIfKilled,
+                              onChanged: (value) {
+                                setState(() {
+                                  _isEnabledEvenIfKilled = value;
+                                });
+                              },
+                            ),
+                          ),
+                          alignment: PlaceholderAlignment.middle,
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: FilledButton(
+                    onPressed: () async {
+                      final status = Platform.isIOS
+                          ? await Permission.locationAlways.request()
+                          : await Permission.location.request();
+                      if (!status.isGranted) {
+                        setState(() {
+                          _bgText = 'Permission is not isGranted.';
+                        });
+                        return;
+                      }
+                      await BackgroundTask.instance.start(
+                        isEnabledEvenIfKilled: _isEnabledEvenIfKilled,
+                      );
+                      setState(() {
+                        _bgText = 'start';
+                      });
+                    },
+                    child: const Text('Start'),
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: FilledButton(
+                    onPressed: () async {
+                      await BackgroundTask.instance.stop();
+                      setState(() {
+                        _bgText = 'stop';
+                      });
+                    },
+                    child: const Text('Stop'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Builder(
+                    builder: (context) {
+                      return FilledButton(
+                        onPressed: () async {
+                          final isRunning =
+                              await BackgroundTask.instance.isRunning;
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('isRunning: $isRunning'),
+                                action: SnackBarAction(
+                                  label: 'close',
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context)
+                                        .clearSnackBars();
+                                  },
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: const Text('isRunning'),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
