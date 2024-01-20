@@ -209,12 +209,7 @@ class LocationUpdatesService: Service() {
             registerReceiver(broadcastReceiver, filter)
         }
         updateNotification()
-    }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        super.onStartCommand(intent, flags, startId)
-        isRunning = true
-        statusLiveData.value = StatusEventStreamHandler.StatusType.Start.value
         pref.getLong(callbackDispatcherRawHandleKey, 0).also { callbackHandle ->
             Log.d(TAG, "onStartCommand callbackHandle: $callbackHandle")
             if (callbackHandle == 0.toLong()) {
@@ -245,7 +240,14 @@ class LocationUpdatesService: Service() {
         val distanceFilter = pref.getFloat(distanceFilterKey, 0.0.toFloat())
         locationRequest = createRequest(distanceFilter)
         requestLocationUpdates()
-        return START_REDELIVER_INTENT
+
+        isRunning = true
+        statusLiveData.value = StatusEventStreamHandler.StatusType.Start.value
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        return START_STICKY
     }
 
     override fun onDestroy() {
