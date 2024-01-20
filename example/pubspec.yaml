@@ -32,6 +32,8 @@ dependencies:
 
   shared_preferences: ^2.2.2
 
+  map_launcher: ^3.1.0
+
 dev_dependencies:
   build_runner:
 

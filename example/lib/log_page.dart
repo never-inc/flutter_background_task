@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:isar/isar.dart';
+import 'package:map_launcher/map_launcher.dart';
 
 class LogPage extends StatefulWidget {
   const LogPage({super.key});
@@ -143,6 +144,13 @@ class _LogPageState extends State<LogPage> {
                           DateFormat('yyyy.M.d H:mm:ss', 'ja_JP')
                               .format(data.createdAt),
                         ),
+                        onTap: () async {
+                          final availableMaps = await MapLauncher.installedMaps;
+                          await availableMaps.first.showMarker(
+                            coords: Coords(data.lat, data.lng),
+                            title: '${data.lat}, ${data.lng}',
+                          );
+                        },
                       );
                     },
                     separatorBuilder: (context, index) {
