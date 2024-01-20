@@ -21,15 +21,25 @@ import CoreLocation
 
 public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
 
+    public static let dispatchEngine: FlutterEngine = FlutterEngine(
+        name: Bundle.main.bundleIdentifier ?? "background_task",
+        project: nil,
+        allowHeadlessExecution: true
+    )
+    public static var onRegisterDispatchEngine: (() -> Void)?
+    static var isRegisteredDispatchEngine = false
+    
     static var locationManager: CLLocationManager?
     static var channel: FlutterMethodChannel?
-    static var isUpdatingLocation = false
-    static var isEnabledEvenIfKilled = false
+    static var isRunning = false
     
-    static var dispatchEngine: FlutterEngine?
     static var dispatchChannel: FlutterMethodChannel?
     static var dispatcherRawHandle: Int?
     static var handlerRawHandle: Int?
+    
+    private var isEnabledEvenIfKilled: Bool {
+        return UserDefaultsRepository.instance.fetchIsEnabledEvenIfKilled()
+    }
     
     enum DesiredAccuracy: String {
         case reduced = "reduced"
@@ -77,64 +87,69 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
         
         let statusEventChannel = FlutterEventChannel(name: "com.neverjp.background_task/statusEvent", binaryMessenger: registrar.messenger())
         statusEventChannel.setStreamHandler(StatusEventStreamHandler())
+    
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if (call.method == "start_background_task") {
-            UserDefaultsRepository.instance.removeAll()
-            if let dispatcherRawHandle = Self.dispatcherRawHandle, let handlerRawHandle = Self.handlerRawHandle {
-                UserDefaultsRepository.instance.save(
-                    callbackDispatcherRawHandle: dispatcherRawHandle,
-                    callbackHandlerRawHandle: handlerRawHandle
-                )
-            }
-            setDispatchEngine()
             let args = call.arguments as? Dictionary<String, Any>
-            let distanceFilter = args?["distanceFilter"] as? Double
+            let distanceFilter = (args?["distanceFilter"] as? Double) ?? 0
             let desiredAccuracy: DesiredAccuracy
             if let value = args?["iOSDesiredAccuracy"] as? String, let type = DesiredAccuracy(rawValue: value) {
                 desiredAccuracy = type
             } else {
                 desiredAccuracy = .reduced
             }
+            let isEnabledEvenIfKilled = (args?["isEnabledEvenIfKilled"] as? Bool) ?? false
+            
+            let userDefaultsRepository = UserDefaultsRepository.instance
+            userDefaultsRepository.removeRawHandle()
+            if let dispatcherRawHandle = Self.dispatcherRawHandle, let handlerRawHandle = Self.handlerRawHandle {
+                userDefaultsRepository.save(
+                    callbackDispatcherRawHandle: dispatcherRawHandle,
+                    callbackHandlerRawHandle: handlerRawHandle
+                )
+            }
+            userDefaultsRepository.save(
+                distanceFilter: distanceFilter,
+                desiredAccuracy: desiredAccuracy
+            )
+            userDefaultsRepository.saveIsEnabledEvenIfKilled(isEnabledEvenIfKilled)
+            
+            registerDispatchEngine()
+          
             let locationManager = CLLocationManager()
             locationManager.allowsBackgroundLocationUpdates = true
             locationManager.showsBackgroundLocationIndicator = true
             locationManager.pausesLocationUpdatesAutomatically = false
             locationManager.desiredAccuracy = desiredAccuracy.kCLLocation
-            locationManager.distanceFilter = distanceFilter ?? 0
+            locationManager.distanceFilter = distanceFilter
             locationManager.delegate = self
             Self.locationManager = locationManager
             Self.locationManager?.requestAlwaysAuthorization()
-            Self.locationManager?.startUpdatingLocation()
-            
-            Self.isEnabledEvenIfKilled = (args?["isEnabledEvenIfKilled"] as? Bool) ?? false
-            if (Self.isEnabledEvenIfKilled) {
+            if (isEnabledEvenIfKilled) {
                 Self.locationManager?.startMonitoringSignificantLocationChanges()
             }
-            Self.isUpdatingLocation = true
+            Self.locationManager?.startUpdatingLocation()
+            Self.isRunning = true
             
             StatusEventStreamHandler.eventSink?(
                 StatusEventStreamHandler.StatusType.start(message: "\(desiredAccuracy)").value
             )
-            UserDefaultsRepository.instance.save(
-                distanceFilter: locationManager.distanceFilter,
-                desiredAccuracy: desiredAccuracy
-            )
             result(true)
         } else if (call.method == "stop_background_task") {
-            if Self.isEnabledEvenIfKilled {
+            if isEnabledEvenIfKilled {
                 Self.locationManager?.stopMonitoringSignificantLocationChanges()
-                Self.isEnabledEvenIfKilled = false
             }
+            UserDefaultsRepository.instance.saveIsEnabledEvenIfKilled(false)
             Self.locationManager?.stopUpdatingLocation()
-            Self.isUpdatingLocation = false
+            Self.isRunning = false
             StatusEventStreamHandler.eventSink?(
                 StatusEventStreamHandler.StatusType.stop.value
             )
             result(true)
         } else if (call.method == "is_running_background_task") {
-            result(Self.isUpdatingLocation)
+            result(Self.isRunning)
         } else if (call.method == "set_background_handler") {
             let args = call.arguments as? Dictionary<String, Any>
             Self.dispatcherRawHandle = args?["callbackDispatcherRawHandle"] as? Int
@@ -146,7 +161,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
     
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
         if (launchOptions[UIApplication.LaunchOptionsKey.location] != nil) {
-            setDispatchEngine()
+            registerDispatchEngine()
             let locationManager = CLLocationManager()
             locationManager.allowsBackgroundLocationUpdates = true
             locationManager.showsBackgroundLocationIndicator = true
@@ -158,14 +173,19 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             Self.locationManager = locationManager
             Self.locationManager?.startMonitoringSignificantLocationChanges()
             Self.locationManager?.startUpdatingLocation()
-            Self.isUpdatingLocation = true
-            Self.isEnabledEvenIfKilled = true
+            Self.isRunning = true
         }
         return true
     }
     
+    public func applicationDidEnterBackground(_ application: UIApplication) {
+        if (isEnabledEvenIfKilled) {
+            Self.locationManager?.startMonitoringSignificantLocationChanges()
+        }
+    }
+    
     public func applicationWillTerminate(_ application: UIApplication) {
-        if (Self.isEnabledEvenIfKilled) {
+        if (isEnabledEvenIfKilled) {
             Self.locationManager?.startMonitoringSignificantLocationChanges()
         }
     }
@@ -203,33 +223,26 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
         )
     }
     
-    private func setDispatchEngine() {
+    private func registerDispatchEngine() {
+        if (Self.isRegisteredDispatchEngine) {
+            return
+        }
         let handle = UserDefaultsRepository.instance.fetchCallbackDispatcherRawHandle()
         if let info = FlutterCallbackCache.lookupCallbackInformation(Int64(handle)) {
-            Self.dispatchEngine = FlutterEngine(
-               name: Bundle.main.bundleIdentifier ?? "background_task",
-               project: nil,
-               allowHeadlessExecution: true
-            )
-            guard let dispatchEngine = Self.dispatchEngine else {
-                return
-            }
-            dispatchEngine.run(withEntrypoint: info.callbackName, libraryURI: info.callbackLibraryPath)
-            
-            Self.dispatchChannel = FlutterMethodChannel(
+            Self.dispatchEngine.run(withEntrypoint: info.callbackName, libraryURI: info.callbackLibraryPath)
+            Self.onRegisterDispatchEngine?()
+            let dispatchChannel = FlutterMethodChannel(
                 name: "com.neverjp.background_task/methods",
-                binaryMessenger: dispatchEngine.binaryMessenger
+                binaryMessenger: Self.dispatchEngine.binaryMessenger
             )
-            guard let dispatchChannel = Self.dispatchChannel else {
-                return
-            }
-            
             dispatchChannel.setMethodCallHandler { call, result in
                 if (call.method == "callback_channel_initialized") {
                     dispatchChannel.invokeMethod("notify_callback_dispatcher", arguments: nil)
                     result(true)
                 }
             }
+            Self.dispatchChannel = dispatchChannel
+            Self.isRegisteredDispatchEngine = true
         }
     }
 }

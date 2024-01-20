@@ -12,6 +12,7 @@ struct UserDefaultsRepository {
     
     enum Key: String {
         case distanceFilter = "com.neverjp.background_task.distanceFilter"
+        case isEnabledEvenIfKilled = "com.neverjp.background_task.isEnabledEvenIfKilled"
         case desiredAccuracy = "com.neverjp.background_task.desiredAccuracy"
         case callbackDispatcherRawHandle = "com.neverjp.background_task.callbackDispatcherRawHandle"
         case callbackHandlerRawHandle = "com.neverjp.background_task.callbackHandlerRawHandle"
@@ -20,7 +21,10 @@ struct UserDefaultsRepository {
         }
     }
     
-    func save(distanceFilter: Double, desiredAccuracy: BackgroundTaskPlugin.DesiredAccuracy) {
+    func save(
+        distanceFilter: Double,
+        desiredAccuracy: BackgroundTaskPlugin.DesiredAccuracy
+    ) {
         UserDefaults.standard.setValue(distanceFilter, forKey: Self.Key.distanceFilter.value)
         UserDefaults.standard.setValue(desiredAccuracy.rawValue, forKey: Self.Key.desiredAccuracy.value)
     }
@@ -28,6 +32,10 @@ struct UserDefaultsRepository {
     func save(callbackDispatcherRawHandle: Int, callbackHandlerRawHandle: Int) {
         UserDefaults.standard.setValue(callbackDispatcherRawHandle, forKey: Self.Key.callbackDispatcherRawHandle.value)
         UserDefaults.standard.setValue(callbackHandlerRawHandle, forKey: Self.Key.callbackHandlerRawHandle.value)
+    }
+    
+    func saveIsEnabledEvenIfKilled(_ isEnabledEvenIfKilled: Bool) {
+        UserDefaults.standard.setValue(isEnabledEvenIfKilled, forKey: Self.Key.isEnabledEvenIfKilled.value)
     }
     
     func fetch() -> (distanceFilter: Double, desiredAccuracy: BackgroundTaskPlugin.DesiredAccuracy) {
@@ -42,6 +50,10 @@ struct UserDefaultsRepository {
         return (distanceFilter: distanceFilter, desiredAccuracy: desiredAccuracy)
     }
     
+    func fetchIsEnabledEvenIfKilled() -> Bool {
+        return UserDefaults.standard.bool(forKey: Self.Key.isEnabledEvenIfKilled.value)
+    }
+    
     func fetchCallbackDispatcherRawHandle() -> Int {
         return UserDefaults.standard.integer(forKey: Self.Key.callbackDispatcherRawHandle.value)
     }
@@ -50,9 +62,7 @@ struct UserDefaultsRepository {
         return UserDefaults.standard.integer(forKey: Self.Key.callbackHandlerRawHandle.value)
     }
     
-    func removeAll() {
-        UserDefaults.standard.removeObject(forKey: Self.Key.distanceFilter.value)
-        UserDefaults.standard.removeObject(forKey: Self.Key.desiredAccuracy.value)
+    func removeRawHandle() {
         UserDefaults.standard.removeObject(forKey: Self.Key.callbackDispatcherRawHandle.value)
         UserDefaults.standard.removeObject(forKey: Self.Key.callbackHandlerRawHandle.value)
     }
