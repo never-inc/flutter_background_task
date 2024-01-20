@@ -27,7 +27,7 @@ await BackgroundTask.instance.start();
 await BackgroundTask.instance.stop();
 ```
 
-This is an implementation for receiving updates even when the task is task-killed.
+This is an implementation for receiving updates even when the task is task-killed. In this package, iOS uses [startMonitoringSignificantLocationChanges](https://developer.apple.com/documentation/corelocation/cllocationmanager/1423531-startmonitoringsignificantlocati) and Android uses [ForegroundService](https://developer.android.com/develop/background-work/services/foreground-services).
 
 ```dart
 // Define callback handler at the top level.
@@ -94,7 +94,7 @@ iOS: Info.plist
 </array>
 ```
 
-To use an external package(SharedPreference etc..) in callback handler, register DispatchEngine in AppDelegate.
+To use an external package (shared_preference etc..) in callback handler, register DispatchEngine in AppDelegate.
 
 iOS: AppDelegate.swift
 
@@ -129,3 +129,7 @@ Android: AndroidManifest.xml
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 ```
+
+## References
+
+- [Executing Dart in the Background with Flutter Plugins and Geofencing](https://medium.com/flutter/executing-dart-in-the-background-with-flutter-plugins-and-geofencing-2b3e40a1a124#56b7)
