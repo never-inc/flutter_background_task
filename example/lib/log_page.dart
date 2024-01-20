@@ -64,7 +64,7 @@ class _LogPageState extends State<LogPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Log Page'),
+        title: const Text('Background Log'),
         actions: [
           IconButton(
             onPressed: () {
@@ -106,62 +106,76 @@ class _LogPageState extends State<LogPage> {
           }
           return true;
         },
-        child: CustomScrollView(
+        child: Scrollbar(
           controller: scrollController,
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
-          slivers: [
-            CupertinoSliverRefreshControl(
-              onRefresh: () async {
-                await onRefresh();
-                await Future<void>.delayed(const Duration(milliseconds: 500));
-              },
+          child: CustomScrollView(
+            controller: scrollController,
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
             ),
-            SliverMainAxisGroup(
-              slivers: [
-                SliverList.separated(
-                  itemBuilder: (context, index) {
-                    final data = items[index];
-                    return ListTile(
-                      title: Text('${data.lat}, ${data.lng}'),
-                      leading: Text(data.id.toString()),
-                      trailing: Text(
-                        DateFormat('yyyy.M.d H:mm:ss', 'ja_JP')
-                            .format(data.createdAt),
-                      ),
-                    );
-                  },
-                  separatorBuilder: (context, index) {
-                    return const Divider(height: 1);
-                  },
-                  itemCount: items.length,
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.only(top: 16, bottom: 56),
-                  sliver: SliverToBoxAdapter(
-                    child: Visibility(
-                      visible: isLoading,
-                      child: const CupertinoActivityIndicator(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (items.isEmpty)
-              SliverFillRemaining(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16)
-                        .copyWith(bottom: 108),
-                    child: const Text(
-                      'nothing',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
+            slivers: [
+              CupertinoSliverRefreshControl(
+                onRefresh: () async {
+                  await onRefresh();
+                  await Future<void>.delayed(const Duration(milliseconds: 500));
+                },
               ),
-          ],
+              SliverMainAxisGroup(
+                slivers: [
+                  SliverList.separated(
+                    itemBuilder: (context, index) {
+                      final data = items[index];
+                      return ListTile(
+                        title: Text(
+                          '${data.lat}, ${data.lng}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                          ),
+                        ),
+                        leading: Text(
+                          data.id.toString(),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        trailing: Text(
+                          DateFormat('yyyy.M.d H:mm:ss', 'ja_JP')
+                              .format(data.createdAt),
+                        ),
+                      );
+                    },
+                    separatorBuilder: (context, index) {
+                      return const Divider(height: 1);
+                    },
+                    itemCount: items.length,
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.only(top: 16, bottom: 56),
+                    sliver: SliverToBoxAdapter(
+                      child: Visibility(
+                        visible: isLoading,
+                        child: const CupertinoActivityIndicator(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (items.isEmpty)
+                SliverFillRemaining(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16)
+                          .copyWith(bottom: 108),
+                      child: const Text(
+                        'nothing',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
