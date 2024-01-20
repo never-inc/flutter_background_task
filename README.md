@@ -80,7 +80,7 @@ dependencies:
 
 iOS: Info.plist
 
-```text
+```plist
 <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 <string>Used to monitor location in the background and notify to app.</string>
 <key>NSLocationAlwaysUsageDescription</key>
@@ -92,6 +92,32 @@ iOS: Info.plist
     <string>fetch</string>
     <string>location</string>
 </array>
+```
+
+To use an external package(SharedPreference etc..) in callback handler, register DispatchEngine in AppDelegate.
+
+iOS: AppDelegate.swift
+
+```swift
+import UIKit
+import Flutter
+import background_task // 👈 Add
+
+@UIApplicationMain
+@objc class AppDelegate: FlutterAppDelegate {
+    override func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+    ) -> Bool {
+        GeneratedPluginRegistrant.register(with: self)
+        // 👇 Add
+        BackgroundTaskPlugin.onRegisterDispatchEngine = {
+            GeneratedPluginRegistrant.register(with: BackgroundTaskPlugin.dispatchEngine)
+        }
+        return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    }
+}
+
 ```
 
 Android: AndroidManifest.xml
