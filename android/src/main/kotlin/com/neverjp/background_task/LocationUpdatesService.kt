@@ -143,10 +143,6 @@ class LocationUpdatesService: Service() {
             setWaitForAccurateLocation(true)
         }.build()
 
-    override fun onBind(intent: Intent?): IBinder {
-        return binder
-    }
-
     override fun onCreate() {
         val googleAPIAvailability = GoogleApiAvailability.getInstance()
             .isGooglePlayServicesAvailable(applicationContext)
@@ -243,6 +239,10 @@ class LocationUpdatesService: Service() {
 
         isRunning = true
         statusLiveData.value = StatusEventStreamHandler.StatusType.Start.value
+    }
+
+    override fun onBind(intent: Intent?): IBinder {
+        return binder
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
