@@ -1,5 +1,13 @@
 # background_task
 
+<a href="https://neverjp.com#gh-light-mode-only"><img width="40%" src="./img/logo_blk.png#gh-light-mode-only" /></a>
+
+<a href="https://neverjp.com#gh-dark-mode-only"><img width="40%" src="./img/logo_wht.png#gh-dark-mode-only" /></a>
+
+Developed with 💙 by [Never inc](https://neverjp.com/).
+
+---
+
 ## Motivation
 
 Enable developers to continue processing even when the application transitions to the background, we have created a package that allows processing to continue using location updates.This package was created with reference to [background_location](https://pub.dev/packages/background_location).

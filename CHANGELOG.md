@@ -1,4 +1,7 @@
-# 0.1.0
+# 0.1.0+1
+Updated README.
+
+## 0.1.0
 Enabled to work even if the app task is killed.
 
 ## 0.0.8
