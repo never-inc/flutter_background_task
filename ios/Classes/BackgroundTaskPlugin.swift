@@ -31,6 +31,8 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
     
     static var locationManager: CLLocationManager?
     static var channel: FlutterMethodChannel?
+    static var bgEventChannel: FlutterEventChannel?
+    static var statusEventChannel: FlutterEventChannel?
     static var isRunning = false
     
     static var dispatchChannel: FlutterMethodChannel?
@@ -77,17 +79,18 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
         let instance = BackgroundTaskPlugin()
         registrar.addApplicationDelegate(instance)
         
-        let channel = FlutterMethodChannel(name: "com.neverjp.background_task/methods", binaryMessenger: registrar.messenger())
+        let channel = FlutterMethodChannel(name: ChannelName.methods.value, binaryMessenger: registrar.messenger())
         registrar.addMethodCallDelegate(instance, channel: channel)
         channel.setMethodCallHandler(instance.handle)
         BackgroundTaskPlugin.channel = channel
         
-        let bgEventChannel = FlutterEventChannel(name: "com.neverjp.background_task/bgEvent", binaryMessenger: registrar.messenger())
+        let bgEventChannel = FlutterEventChannel(name: ChannelName.bgEvent.value, binaryMessenger: registrar.messenger())
         bgEventChannel.setStreamHandler(BgEventStreamHandler())
+        BackgroundTaskPlugin.bgEventChannel = bgEventChannel
         
-        let statusEventChannel = FlutterEventChannel(name: "com.neverjp.background_task/statusEvent", binaryMessenger: registrar.messenger())
+        let statusEventChannel = FlutterEventChannel(name: ChannelName.statusEvent.value, binaryMessenger: registrar.messenger())
         statusEventChannel.setStreamHandler(StatusEventStreamHandler())
-    
+        BackgroundTaskPlugin.statusEventChannel = statusEventChannel
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -125,23 +128,20 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             locationManager.desiredAccuracy = desiredAccuracy.kCLLocation
             locationManager.distanceFilter = distanceFilter
             locationManager.delegate = self
-            Self.locationManager = locationManager
-            Self.locationManager?.requestAlwaysAuthorization()
+            locationManager.requestAlwaysAuthorization()
             if (isEnabledEvenIfKilled) {
-                Self.locationManager?.startMonitoringSignificantLocationChanges()
+                locationManager.startMonitoringSignificantLocationChanges()
             }
-            Self.locationManager?.startUpdatingLocation()
+            locationManager.startUpdatingLocation()
+            Self.locationManager = locationManager
             Self.isRunning = true
-            
             StatusEventStreamHandler.eventSink?(
                 StatusEventStreamHandler.StatusType.start(message: "\(desiredAccuracy)").value
             )
             result(true)
         } else if (call.method == "stop_background_task") {
-            if isEnabledEvenIfKilled {
-                Self.locationManager?.stopMonitoringSignificantLocationChanges()
-            }
             UserDefaultsRepository.instance.saveIsEnabledEvenIfKilled(false)
+            Self.locationManager?.stopMonitoringSignificantLocationChanges()
             Self.locationManager?.stopUpdatingLocation()
             Self.isRunning = false
             StatusEventStreamHandler.eventSink?(
@@ -170,9 +170,9 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             locationManager.distanceFilter = distanceFilter
             locationManager.desiredAccuracy = desiredAccuracy.kCLLocation
             locationManager.delegate = self
+            locationManager.startMonitoringSignificantLocationChanges()
+            locationManager.startUpdatingLocation()
             Self.locationManager = locationManager
-            Self.locationManager?.startMonitoringSignificantLocationChanges()
-            Self.locationManager?.startUpdatingLocation()
             Self.isRunning = true
         }
         return true
@@ -232,7 +232,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             Self.dispatchEngine.run(withEntrypoint: info.callbackName, libraryURI: info.callbackLibraryPath)
             Self.onRegisterDispatchEngine?()
             let dispatchChannel = FlutterMethodChannel(
-                name: "com.neverjp.background_task/methods",
+                name: ChannelName.methods.value,
                 binaryMessenger: Self.dispatchEngine.binaryMessenger
             )
             dispatchChannel.setMethodCallHandler { call, result in
