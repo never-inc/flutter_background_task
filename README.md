@@ -86,7 +86,7 @@ dependencies:
 
 iOS: Info.plist
 
-```text
+```xml
 <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 <string>Used to monitor location in the background and notify to app.</string>
 <key>NSLocationAlwaysUsageDescription</key>
