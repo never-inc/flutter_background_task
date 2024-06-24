@@ -29,8 +29,7 @@ class BackgroundTask {
 
   /// `setBackgroundHandler` provides a function of location information.
   Future<void> setBackgroundHandler(BackgroundHandler handler) async {
-    final callbackDispatcherHandle =
-        PluginUtilities.getCallbackHandle(callbackDispatcher);
+    final callbackDispatcherHandle = PluginUtilities.getCallbackHandle(callbackDispatcher);
     final callbackHandler = PluginUtilities.getCallbackHandle(handler);
     if (callbackDispatcherHandle != null && callbackHandler != null) {
       await _methodChannel.invokeMethod<bool>(
@@ -69,6 +68,7 @@ class BackgroundTask {
   /// `iOSDesiredAccuracy` - the desired accuracy of the location data.
   Future<void> start({
     double? distanceFilter,
+    bool? pausesLocationUpdatesAutomatically,
     bool isEnabledEvenIfKilled = true,
     DesiredAccuracy iOSDesiredAccuracy = DesiredAccuracy.bestForNavigation,
   }) async {
@@ -76,6 +76,7 @@ class BackgroundTask {
       'start_background_task',
       {
         'distanceFilter': distanceFilter,
+        'pausesLocationUpdatesAutomatically': pausesLocationUpdatesAutomatically,
         'isEnabledEvenIfKilled': isEnabledEvenIfKilled,
         'iOSDesiredAccuracy': iOSDesiredAccuracy.value,
       },
@@ -89,14 +90,12 @@ class BackgroundTask {
 
   /// `isRunning` returns whether the background task is running or not.
   Future<bool> get isRunning async {
-    final result =
-        await _methodChannel.invokeMethod<bool>('is_running_background_task');
+    final result = await _methodChannel.invokeMethod<bool>('is_running_background_task');
     return result ?? false;
   }
 
   /// `stream` provides a stream of location information.
-  Stream<Location> get stream =>
-      _bgEventChannel.receiveBroadcastStream().map((event) {
+  Stream<Location> get stream => _bgEventChannel.receiveBroadcastStream().map((event) {
         final json = event as Map;
         final lat = json['lat'] as double?;
         final lng = json['lng'] as double?;
@@ -104,12 +103,10 @@ class BackgroundTask {
       }).asBroadcastStream();
 
   /// `status` provides a stream of status events.
-  Stream<StatusEvent> get status =>
-      _statusEventChannel.receiveBroadcastStream().map((event) {
+  Stream<StatusEvent> get status => _statusEventChannel.receiveBroadcastStream().map((event) {
         final value = (event as String).split(',');
         return (
-          status: StatusEventType.values
-              .firstWhere((element) => element.value == value[0]),
+          status: StatusEventType.values.firstWhere((element) => element.value == value[0]),
           message: value.length > 1 ? value[1] : null,
         );
       }).asBroadcastStream();
