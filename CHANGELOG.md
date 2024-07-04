@@ -1,4 +1,7 @@
-# 0.1.2
+# 0.1.3
+Bug fix for Android SDK 34.
+
+## 0.1.2
 Android Bug fix.
 
 ## 0.1.1+1
