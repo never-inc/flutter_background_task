@@ -27,6 +27,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
 import android.os.Binder
 import android.os.Build
 import android.os.Handler
@@ -280,9 +281,14 @@ class LocationUpdatesService: Service() {
         }
     }
 
+    // https://github.com/JigarRangani/ForGroundLocation/blob/main/app/src/main/java/com/jigar/locationforground/LocationForegroundService.kt
     private fun updateNotification() {
         if (!isRunning) {
-            startForeground(NOTIFICATION_ID, notification.build())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification.build(), FOREGROUND_SERVICE_TYPE_LOCATION)
+            }else{
+                startForeground(NOTIFICATION_ID, notification.build())
+            }
         } else {
             val notificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
