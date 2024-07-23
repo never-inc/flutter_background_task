@@ -17,6 +17,7 @@ limitations under the License.
 
 package com.neverjp.background_task
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -27,6 +28,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
 import android.os.Binder
 import android.os.Build
 import android.os.Handler
@@ -34,6 +37,7 @@ import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -169,8 +173,6 @@ class LocationUpdatesService: Service() {
                             methodChannel?.invokeMethod("background_handler", args)
                         }
                     }
-//                    Log.d(TAG, value)
-                    updateNotification()
                 }
             }
         }
@@ -204,7 +206,6 @@ class LocationUpdatesService: Service() {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(broadcastReceiver, filter)
         }
-        updateNotification()
 
         pref.getLong(callbackDispatcherRawHandleKey, 0).also { callbackHandle ->
             Log.d(TAG, "onStartCommand callbackHandle: $callbackHandle")
@@ -246,7 +247,9 @@ class LocationUpdatesService: Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        super.onStartCommand(intent, flags, startId)
+        // https://github.com/JigarRangani/ForGroundLocation/blob/main/app/src/main/java/com/jigar/locationforground/LocationForegroundService.kt#L29
+        if (!checkLocationPermissionIsGiven()) return START_NOT_STICKY
+        updateNotification()
         return START_STICKY
     }
 
@@ -280,9 +283,14 @@ class LocationUpdatesService: Service() {
         }
     }
 
+    // https://github.com/JigarRangani/ForGroundLocation/blob/main/app/src/main/java/com/jigar/locationforground/LocationForegroundService.kt
     private fun updateNotification() {
         if (!isRunning) {
-            startForeground(NOTIFICATION_ID, notification.build())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification.build(), FOREGROUND_SERVICE_TYPE_LOCATION)
+            }else{
+                startForeground(NOTIFICATION_ID, notification.build())
+            }
         } else {
             val notificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -309,5 +317,26 @@ class LocationUpdatesService: Service() {
             e.printStackTrace()
             null
         }
+    }
+
+    private fun checkLocationPermissionIsGiven() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    } else {
+        ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
     }
 }
