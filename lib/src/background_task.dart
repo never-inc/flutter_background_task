@@ -70,7 +70,9 @@ class BackgroundTask {
     double? distanceFilter,
     bool? pausesLocationUpdatesAutomatically,
     bool isEnabledEvenIfKilled = true,
+    double updateIntervalInMilliseconds = 1000,
     DesiredAccuracy iOSDesiredAccuracy = DesiredAccuracy.bestForNavigation,
+    AndroidDesiredAccuracy androidDesiredAccuracy = AndroidDesiredAccuracy.priorityBalancedPowerAccuracy,
   }) async {
     await _methodChannel.invokeMethod<bool>(
       'start_background_task',
@@ -78,7 +80,9 @@ class BackgroundTask {
         'distanceFilter': distanceFilter,
         'pausesLocationUpdatesAutomatically': pausesLocationUpdatesAutomatically,
         'isEnabledEvenIfKilled': isEnabledEvenIfKilled,
+        'updateIntervalInMilliseconds': updateIntervalInMilliseconds,
         'iOSDesiredAccuracy': iOSDesiredAccuracy.value,
+        'androidDesiredAccuracy': androidDesiredAccuracy.value,
       },
     );
   }

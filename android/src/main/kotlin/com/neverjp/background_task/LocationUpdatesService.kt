@@ -72,6 +72,26 @@ class LocationUpdatesService: Service() {
     private val pref: SharedPreferences
         get() = applicationContext.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
 
+    enum class DesiredAccuracy(val accuracy: String) {
+        PRIORITY_HIGH_ACCURACY("priorityHighAccuracy"),
+        PRIORITY_BALANCED_POWER_ACCURACY("priorityBalancedPowerAccuracy"),
+        PRIORITY_LOW_POWER("priorityLowPower");
+
+        companion object {
+            fun lookup(value: String): DesiredAccuracy {
+                return values().find { it.accuracy == value } ?: throw IllegalArgumentException()
+            }
+        }
+
+        fun getLocationPriority(): Int {
+            return when (this) {
+                PRIORITY_HIGH_ACCURACY -> Priority.PRIORITY_HIGH_ACCURACY
+                PRIORITY_BALANCED_POWER_ACCURACY -> Priority.PRIORITY_BALANCED_POWER_ACCURACY
+                PRIORITY_LOW_POWER -> Priority.PRIORITY_LOW_POWER
+            }
+        }
+    }
+
     companion object {
         private val TAG = LocationUpdatesService::class.java.simpleName
         var isRunning: Boolean = false
@@ -91,13 +111,14 @@ class LocationUpdatesService: Service() {
         private const val EXTRA_STARTED_FROM_NOTIFICATION = "$PACKAGE_NAME.started_from_notification"
 
         private const val NOTIFICATION_ID = 373737
-        const val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 1000
 
         private lateinit var broadcastReceiver: BroadcastReceiver
         private const val STOP_SERVICE = "stop_service"
 
         const val isEnabledEvenIfKilledKey = "isEnabledEvenIfKilled"
         const val distanceFilterKey = "distanceFilter"
+        const val desiredAccuracyKey = "androidDesiredAccuracy"
+        const val updateIntervalInMillisecondsKey = "updateIntervalInMilliseconds"
         const val callbackDispatcherRawHandleKey = "callbackDispatcherRawHandle"
         const val callbackHandlerRawHandleKey = "callbackHandlerRawHandle"
 
@@ -137,10 +158,10 @@ class LocationUpdatesService: Service() {
             get() = this@LocationUpdatesService
     }
 
-    private fun createRequest(distanceFilter: Float): LocationRequest =
+    private fun createRequest(distanceFilter: Float, updateIntervalInMilliseconds: Long, desiredAccuracy: String): LocationRequest =
         LocationRequest.Builder(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-            UPDATE_INTERVAL_IN_MILLISECONDS
+            DesiredAccuracy.lookup(desiredAccuracy).getLocationPriority(),
+            updateIntervalInMilliseconds
         ).apply {
             setMinUpdateDistanceMeters(distanceFilter)
             setGranularity(Granularity.GRANULARITY_PERMISSION_LEVEL)
@@ -156,6 +177,7 @@ class LocationUpdatesService: Service() {
             fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
             fusedLocationCallback = object : LocationCallback() {
                 override fun onLocationResult(locationResult: LocationResult) {
+                    Log.d(TAG, "location")
                     super.onLocationResult(locationResult)
                     val newLastLocation = locationResult.lastLocation
                     val lat = newLastLocation?.latitude
@@ -235,11 +257,16 @@ class LocationUpdatesService: Service() {
         }
 
         val distanceFilter = pref.getFloat(distanceFilterKey, 0.0.toFloat())
-        locationRequest = createRequest(distanceFilter)
-        requestLocationUpdates()
+        val updateIntervalInMilliseconds = pref.getLong(updateIntervalInMillisecondsKey, 0.0.toLong())
+        val desiredAccuracy = pref.getString(desiredAccuracyKey, "")
 
-        isRunning = true
-        statusLiveData.value = StatusEventStreamHandler.StatusType.Start.value
+        Log.d(TAG, "distanceFilter: $distanceFilter")
+        Log.d(TAG, "updateIntervalInMilliseconds: $updateIntervalInMilliseconds")
+        Log.d(TAG, "desiredAccuracy: $desiredAccuracy")
+        val priority = DesiredAccuracy.lookup(desiredAccuracy.toString()).getLocationPriority()
+        Log.d(TAG, "desiredAccuracy: $priority")
+
+        locationRequest = createRequest(distanceFilter, updateIntervalInMilliseconds, desiredAccuracy.toString())
     }
 
     override fun onBind(intent: Intent?): IBinder {
@@ -250,28 +277,25 @@ class LocationUpdatesService: Service() {
         // https://github.com/JigarRangani/ForGroundLocation/blob/main/app/src/main/java/com/jigar/locationforground/LocationForegroundService.kt#L29
         if (!checkLocationPermissionIsGiven()) return START_NOT_STICKY
         updateNotification()
+        requestLocationUpdates()
+
+        isRunning = true
+        statusLiveData.value = StatusEventStreamHandler.StatusType.Start.value
         return START_STICKY
     }
 
     override fun onDestroy() {
+        Log.d(TAG, "destroy")
         super.onDestroy()
         isRunning = false
         unregisterReceiver(broadcastReceiver)
-        try {
-            if (isGoogleApiAvailable) {
-                fusedLocationClient!!.removeLocationUpdates(fusedLocationCallback!!)
-            }
-            notificationManager!!.cancel(NOTIFICATION_ID)
-            statusLiveData.value = StatusEventStreamHandler.StatusType.Stop.value
-        } catch (unlikely: SecurityException) {
-            Log.e(TAG, "$unlikely")
-        }
     }
 
     @SuppressLint("MissingPermission")
     private fun requestLocationUpdates() {
         try {
             if (isGoogleApiAvailable && locationRequest != null) {
+                Log.d(TAG, "requestLocationUpdates")
                 fusedLocationClient!!.requestLocationUpdates(
                     locationRequest!!,
                     fusedLocationCallback!!,
@@ -285,13 +309,17 @@ class LocationUpdatesService: Service() {
 
     // https://github.com/JigarRangani/ForGroundLocation/blob/main/app/src/main/java/com/jigar/locationforground/LocationForegroundService.kt
     private fun updateNotification() {
+        Log.d(TAG, "isRunning: $isRunning")
         if (!isRunning) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Log.d(TAG, "startForeground1")
                 startForeground(NOTIFICATION_ID, notification.build(), FOREGROUND_SERVICE_TYPE_LOCATION)
             }else{
+                Log.d(TAG, "startForeground2")
                 startForeground(NOTIFICATION_ID, notification.build())
             }
         } else {
+            Log.d(TAG, "notify")
             val notificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.notify(NOTIFICATION_ID, notification.build())
@@ -299,6 +327,7 @@ class LocationUpdatesService: Service() {
     }
 
     private fun removeLocationUpdates() {
+        Log.d(TAG, "stop")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {

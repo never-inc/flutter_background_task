@@ -126,7 +126,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             let locationManager = CLLocationManager()
             locationManager.allowsBackgroundLocationUpdates = true
             locationManager.showsBackgroundLocationIndicator = true
-            locationManager.pausesLocationUpdatesAutomatically = true
+            locationManager.pausesLocationUpdatesAutomatically = pausesLocationUpdatesAutomatically
             locationManager.desiredAccuracy = desiredAccuracy.kCLLocation
             locationManager.distanceFilter = distanceFilter
             locationManager.activityType = CLActivityType.fitness
@@ -169,7 +169,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             locationManager.allowsBackgroundLocationUpdates = true
             locationManager.showsBackgroundLocationIndicator = true
             let (distanceFilter, desiredAccuracy, pausesLocationUpdatesAutomatically) = UserDefaultsRepository.instance.fetch()
-            locationManager.pausesLocationUpdatesAutomatically = true
+            locationManager.pausesLocationUpdatesAutomatically = pausesLocationUpdatesAutomatically
             locationManager.distanceFilter = distanceFilter
             locationManager.desiredAccuracy = desiredAccuracy.kCLLocation
             locationManager.delegate = self

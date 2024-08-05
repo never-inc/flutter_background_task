@@ -76,6 +76,8 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     when (call.method) {
         "start_background_task" -> {
           val distanceFilter = call.argument<Double>(LocationUpdatesService.distanceFilterKey)
+          val updateIntervalInMilliseconds = call.argument<Double>(LocationUpdatesService.updateIntervalInMillisecondsKey)
+          val desiredAccuracy = call.argument<String>(LocationUpdatesService.desiredAccuracyKey) ?: "priorityBalancedPowerAccuracy"
           val isEnabledEvenIfKilled = call.argument<Boolean>("isEnabledEvenIfKilled") ?: false
 
           pref.edit().apply {
@@ -86,6 +88,8 @@ class BackgroundTaskPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
               putLong(LocationUpdatesService.callbackHandlerRawHandleKey, handlerRawHandle ?: 0)
             }
             putFloat(LocationUpdatesService.distanceFilterKey, distanceFilter?.toFloat() ?: 0.0.toFloat())
+            putLong(LocationUpdatesService.updateIntervalInMillisecondsKey, updateIntervalInMilliseconds?.toLong() ?: 0.0.toLong())
+            putString(LocationUpdatesService.desiredAccuracyKey, desiredAccuracy)
             putBoolean(LocationUpdatesService.isEnabledEvenIfKilledKey, isEnabledEvenIfKilled)
           }.apply()
 
