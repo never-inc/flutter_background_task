@@ -177,7 +177,6 @@ class LocationUpdatesService: Service() {
             fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
             fusedLocationCallback = object : LocationCallback() {
                 override fun onLocationResult(locationResult: LocationResult) {
-                    Log.d(TAG, "location")
                     super.onLocationResult(locationResult)
                     val newLastLocation = locationResult.lastLocation
                     val lat = newLastLocation?.latitude
@@ -259,12 +258,7 @@ class LocationUpdatesService: Service() {
         val distanceFilter = pref.getFloat(distanceFilterKey, 0.0.toFloat())
         val updateIntervalInMilliseconds = pref.getLong(updateIntervalInMillisecondsKey, 0.0.toLong())
         val desiredAccuracy = pref.getString(desiredAccuracyKey, "")
-
-        Log.d(TAG, "distanceFilter: $distanceFilter")
-        Log.d(TAG, "updateIntervalInMilliseconds: $updateIntervalInMilliseconds")
-        Log.d(TAG, "desiredAccuracy: $desiredAccuracy")
         val priority = DesiredAccuracy.lookup(desiredAccuracy.toString()).getLocationPriority()
-        Log.d(TAG, "desiredAccuracy: $priority")
 
         locationRequest = createRequest(distanceFilter, updateIntervalInMilliseconds, desiredAccuracy.toString())
     }
@@ -285,7 +279,6 @@ class LocationUpdatesService: Service() {
     }
 
     override fun onDestroy() {
-        Log.d(TAG, "destroy")
         super.onDestroy()
         isRunning = false
         unregisterReceiver(broadcastReceiver)
@@ -295,7 +288,6 @@ class LocationUpdatesService: Service() {
     private fun requestLocationUpdates() {
         try {
             if (isGoogleApiAvailable && locationRequest != null) {
-                Log.d(TAG, "requestLocationUpdates")
                 fusedLocationClient!!.requestLocationUpdates(
                     locationRequest!!,
                     fusedLocationCallback!!,
@@ -309,17 +301,13 @@ class LocationUpdatesService: Service() {
 
     // https://github.com/JigarRangani/ForGroundLocation/blob/main/app/src/main/java/com/jigar/locationforground/LocationForegroundService.kt
     private fun updateNotification() {
-        Log.d(TAG, "isRunning: $isRunning")
         if (!isRunning) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                Log.d(TAG, "startForeground1")
                 startForeground(NOTIFICATION_ID, notification.build(), FOREGROUND_SERVICE_TYPE_LOCATION)
             }else{
-                Log.d(TAG, "startForeground2")
                 startForeground(NOTIFICATION_ID, notification.build())
             }
         } else {
-            Log.d(TAG, "notify")
             val notificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.notify(NOTIFICATION_ID, notification.build())
@@ -327,7 +315,6 @@ class LocationUpdatesService: Service() {
     }
 
     private fun removeLocationUpdates() {
-        Log.d(TAG, "stop")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {

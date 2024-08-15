@@ -29,7 +29,8 @@ class BackgroundTask {
 
   /// `setBackgroundHandler` provides a function of location information.
   Future<void> setBackgroundHandler(BackgroundHandler handler) async {
-    final callbackDispatcherHandle = PluginUtilities.getCallbackHandle(callbackDispatcher);
+    final callbackDispatcherHandle =
+        PluginUtilities.getCallbackHandle(callbackDispatcher);
     final callbackHandler = PluginUtilities.getCallbackHandle(handler);
     if (callbackDispatcherHandle != null && callbackHandler != null) {
       await _methodChannel.invokeMethod<bool>(
@@ -63,22 +64,30 @@ class BackgroundTask {
   /// `start` starts the background task.
   /// `distanceFilter` - the minimum distance (in meters) a device must move
   /// horizontally before an update event is generated.
+  /// `pausesLocationUpdatesAutomatically` - A Boolean value that indicates
+  /// whether the location-manager object may pause location updates.
   /// `isEnabledEvenIfKilled` - if set to true, the location service will
   /// not stop even after the app is killed.
-  /// `iOSDesiredAccuracy` - the desired accuracy of the location data.
+  /// `updateIntervalInMilliseconds` - location information acquisition interval
+  /// for Android.
+  /// `iOSDesiredAccuracy` - the desired accuracy of the location data for iOS.
+  /// `AndroidDesiredAccuracy` - the desired accuracy of the location data
+  ///  for Android.
   Future<void> start({
     double? distanceFilter,
     bool? pausesLocationUpdatesAutomatically,
     bool isEnabledEvenIfKilled = true,
     double updateIntervalInMilliseconds = 1000,
     DesiredAccuracy iOSDesiredAccuracy = DesiredAccuracy.bestForNavigation,
-    AndroidDesiredAccuracy androidDesiredAccuracy = AndroidDesiredAccuracy.priorityBalancedPowerAccuracy,
+    AndroidDesiredAccuracy androidDesiredAccuracy =
+        AndroidDesiredAccuracy.priorityBalancedPowerAccuracy,
   }) async {
     await _methodChannel.invokeMethod<bool>(
       'start_background_task',
       {
         'distanceFilter': distanceFilter,
-        'pausesLocationUpdatesAutomatically': pausesLocationUpdatesAutomatically,
+        'pausesLocationUpdatesAutomatically':
+            pausesLocationUpdatesAutomatically,
         'isEnabledEvenIfKilled': isEnabledEvenIfKilled,
         'updateIntervalInMilliseconds': updateIntervalInMilliseconds,
         'iOSDesiredAccuracy': iOSDesiredAccuracy.value,
@@ -94,12 +103,14 @@ class BackgroundTask {
 
   /// `isRunning` returns whether the background task is running or not.
   Future<bool> get isRunning async {
-    final result = await _methodChannel.invokeMethod<bool>('is_running_background_task');
+    final result =
+        await _methodChannel.invokeMethod<bool>('is_running_background_task');
     return result ?? false;
   }
 
   /// `stream` provides a stream of location information.
-  Stream<Location> get stream => _bgEventChannel.receiveBroadcastStream().map((event) {
+  Stream<Location> get stream =>
+      _bgEventChannel.receiveBroadcastStream().map((event) {
         final json = event as Map;
         final lat = json['lat'] as double?;
         final lng = json['lng'] as double?;
@@ -107,10 +118,12 @@ class BackgroundTask {
       }).asBroadcastStream();
 
   /// `status` provides a stream of status events.
-  Stream<StatusEvent> get status => _statusEventChannel.receiveBroadcastStream().map((event) {
+  Stream<StatusEvent> get status =>
+      _statusEventChannel.receiveBroadcastStream().map((event) {
         final value = (event as String).split(',');
         return (
-          status: StatusEventType.values.firstWhere((element) => element.value == value[0]),
+          status: StatusEventType.values
+              .firstWhere((element) => element.value == value[0]),
           message: value.length > 1 ? value[1] : null,
         );
       }).asBroadcastStream();
