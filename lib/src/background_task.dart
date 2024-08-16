@@ -64,20 +64,34 @@ class BackgroundTask {
   /// `start` starts the background task.
   /// `distanceFilter` - the minimum distance (in meters) a device must move
   /// horizontally before an update event is generated.
+  /// `pausesLocationUpdatesAutomatically` - A Boolean value that indicates
+  /// whether the location-manager object may pause location updates.
   /// `isEnabledEvenIfKilled` - if set to true, the location service will
   /// not stop even after the app is killed.
-  /// `iOSDesiredAccuracy` - the desired accuracy of the location data.
+  /// `updateIntervalInMilliseconds` - location information acquisition interval
+  /// for Android.
+  /// `iOSDesiredAccuracy` - the desired accuracy of the location data for iOS.
+  /// `AndroidDesiredAccuracy` - the desired accuracy of the location data
+  ///  for Android.
   Future<void> start({
     double? distanceFilter,
+    bool? pausesLocationUpdatesAutomatically,
     bool isEnabledEvenIfKilled = true,
+    double updateIntervalInMilliseconds = 1000,
     DesiredAccuracy iOSDesiredAccuracy = DesiredAccuracy.bestForNavigation,
+    AndroidDesiredAccuracy androidDesiredAccuracy =
+        AndroidDesiredAccuracy.priorityBalancedPowerAccuracy,
   }) async {
     await _methodChannel.invokeMethod<bool>(
       'start_background_task',
       {
         'distanceFilter': distanceFilter,
+        'pausesLocationUpdatesAutomatically':
+            pausesLocationUpdatesAutomatically,
         'isEnabledEvenIfKilled': isEnabledEvenIfKilled,
+        'updateIntervalInMilliseconds': updateIntervalInMilliseconds,
         'iOSDesiredAccuracy': iOSDesiredAccuracy.value,
+        'androidDesiredAccuracy': androidDesiredAccuracy.value,
       },
     );
   }

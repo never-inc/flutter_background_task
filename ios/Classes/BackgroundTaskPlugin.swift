@@ -97,6 +97,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
         if (call.method == "start_background_task") {
             let args = call.arguments as? Dictionary<String, Any>
             let distanceFilter = (args?["distanceFilter"] as? Double) ?? 0
+            let pausesLocationUpdatesAutomatically = (args?["pausesLocationUpdatesAutomatically"] as? Bool) ?? false
             let desiredAccuracy: DesiredAccuracy
             if let value = args?["iOSDesiredAccuracy"] as? String, let type = DesiredAccuracy(rawValue: value) {
                 desiredAccuracy = type
@@ -115,7 +116,8 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             }
             userDefaultsRepository.save(
                 distanceFilter: distanceFilter,
-                desiredAccuracy: desiredAccuracy
+                desiredAccuracy: desiredAccuracy,
+                pausesLocationUpdatesAutomatically: pausesLocationUpdatesAutomatically
             )
             userDefaultsRepository.saveIsEnabledEvenIfKilled(isEnabledEvenIfKilled)
             
@@ -124,9 +126,10 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             let locationManager = CLLocationManager()
             locationManager.allowsBackgroundLocationUpdates = true
             locationManager.showsBackgroundLocationIndicator = true
-            locationManager.pausesLocationUpdatesAutomatically = false
+            locationManager.pausesLocationUpdatesAutomatically = pausesLocationUpdatesAutomatically
             locationManager.desiredAccuracy = desiredAccuracy.kCLLocation
             locationManager.distanceFilter = distanceFilter
+            locationManager.activityType = CLActivityType.fitness
             locationManager.delegate = self
             locationManager.requestAlwaysAuthorization()
             if (isEnabledEvenIfKilled) {
@@ -165,8 +168,8 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             let locationManager = CLLocationManager()
             locationManager.allowsBackgroundLocationUpdates = true
             locationManager.showsBackgroundLocationIndicator = true
-            locationManager.pausesLocationUpdatesAutomatically = false
-            let (distanceFilter, desiredAccuracy) = UserDefaultsRepository.instance.fetch()
+            let (distanceFilter, desiredAccuracy, pausesLocationUpdatesAutomatically) = UserDefaultsRepository.instance.fetch()
+            locationManager.pausesLocationUpdatesAutomatically = pausesLocationUpdatesAutomatically
             locationManager.distanceFilter = distanceFilter
             locationManager.desiredAccuracy = desiredAccuracy.kCLLocation
             locationManager.delegate = self

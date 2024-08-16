@@ -43,6 +43,17 @@ enum DesiredAccuracy {
   final String value;
 }
 
+enum AndroidDesiredAccuracy {
+  priorityHighAccuracy('priorityHighAccuracy'),
+  priorityBalancedPowerAccuracy('priorityBalancedPowerAccuracy'),
+  priorityLowPower('priorityLowPower'),
+  priorityNoPower('priorityNoPower'),
+  ;
+
+  const AndroidDesiredAccuracy(this.value);
+  final String value;
+}
+
 enum ChannelName {
   methods('com.neverjp.background_task/methods'),
   bgEvent('com.neverjp.background_task/bgEvent'),
