@@ -2,7 +2,7 @@ import UIKit
 import Flutter
 import background_task // 👈 Add
 
-@UIApplicationMain
+@main
 @objc class AppDelegate: FlutterAppDelegate {
     override func application(
         _ application: UIApplication,
