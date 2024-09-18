@@ -171,21 +171,24 @@ class _MainPageState extends State<MainPage> {
                 Flexible(
                   child: FilledButton(
                     onPressed: () async {
-                      final status = Platform.isIOS
-                          ? await Permission.locationAlways.request()
-                          : await Permission.location.request();
-                      if (!status.isGranted) {
+                      final status = await Permission.location.request();
+                      final statusAlways =
+                          await Permission.locationAlways.request();
+
+                      if (status.isGranted && statusAlways.isGranted) {
+                        await BackgroundTask.instance.start(
+                          isEnabledEvenIfKilled: _isEnabledEvenIfKilled,
+                        );
                         setState(() {
-                          _bgText = 'Permission is not isGranted.';
+                          _bgText = 'start';
                         });
-                        return;
+                      } else {
+                        setState(() {
+                          _bgText = 'Permission is not isGranted.\n'
+                              'location: $status\n'
+                              'locationAlways: $status';
+                        });
                       }
-                      await BackgroundTask.instance.start(
-                        isEnabledEvenIfKilled: _isEnabledEvenIfKilled,
-                      );
-                      setState(() {
-                        _bgText = 'start';
-                      });
                     },
                     child: const Text('Start'),
                   ),

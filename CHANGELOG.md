@@ -1,4 +1,7 @@
-# 0.2.0
+# 0.2.0+1
+Updated example code and README.
+
+## 0.2.0
 - Added parameters and fix Android's foregroundService. [#7](https://github.com/never-inc/flutter_background_task/pull/7).
   - Please add `<uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>` in AndroidManifest.xml.
 - Updated example project by latest flutter version.
