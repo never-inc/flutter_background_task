@@ -66,13 +66,12 @@ await BackgroundTask.instance.start(
 Recommended to use with [permission_handler](https://pub.dev/packages/permission_handler).
 
 ```dart
-final status = Platform.isIOS
-    ? await Permission.locationAlways.request()
-    : await Permission.location.request();
-if (!status.isGranted) {
-  return;
+final status = await Permission.location.request();
+final statusAlways = await Permission.locationAlways.request();
+
+if (status.isGranted && statusAlways.isGranted) {
+  await BackgroundTask.instance.start();
 }
-await BackgroundTask.instance.start();
 ```
 
 ### Setup
