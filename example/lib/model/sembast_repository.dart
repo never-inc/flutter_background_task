@@ -1,28 +1,36 @@
 import 'package:background_task_example/model/lat_lng.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:sembast/sembast_io.dart';
+import 'package:sembast/sembast.dart';
+import 'package:sembast_sqflite/sembast_sqflite.dart';
+import 'package:sqflite/sqflite.dart' as sqflite;
 
 class SembastRepository {
   SembastRepository._();
 
   static final StoreRef<int, Map<String, Object?>> _store = intMapStoreFactory
       .store('latLngs');
+  static final DatabaseFactory _databaseFactory = getDatabaseFactorySqflite(
+    sqflite.databaseFactory,
+  );
 
   static Database? _database;
   static Future<Database>? _openingDatabase;
 
   static Future<void> configure() async {
-    await _getDatabase();
+    final database = await _getDatabase();
+    await database.checkForChanges();
   }
 
   static Future<int> add(LatLng latLng) async {
     final database = await _getDatabase();
+    await database.checkForChanges();
     return _store.add(database, latLng.toMap());
   }
 
   static Future<List<LatLng>> find({int offset = 0, required int limit}) async {
     final database = await _getDatabase();
+    await database.checkForChanges();
     final records = await _store.find(
       database,
       finder: Finder(
@@ -38,6 +46,7 @@ class SembastRepository {
 
   static Future<void> clear() async {
     final database = await _getDatabase();
+    await database.checkForChanges();
     await _store.delete(database);
   }
 
@@ -64,7 +73,7 @@ class SembastRepository {
   static Future<Database> _openDatabase() async {
     final directory = await getApplicationDocumentsDirectory();
     await directory.create(recursive: true);
-    final databasePath = p.join(directory.path, 'background_task.db');
-    return databaseFactoryIo.openDatabase(databasePath);
+    final databasePath = p.join(directory.path, 'background_task.sqlite');
+    return _databaseFactory.openDatabase(databasePath);
   }
 }

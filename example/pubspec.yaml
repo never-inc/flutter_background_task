@@ -29,6 +29,8 @@ dependencies:
 
   sembast: ^3.8.9+1
 
+  sembast_sqflite: ^2.2.2
+  sqflite: ^2.4.3
   url_launcher: ^6.3.2
 
 dev_dependencies:

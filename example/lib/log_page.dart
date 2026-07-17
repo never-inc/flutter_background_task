@@ -28,26 +28,49 @@ class LogPage extends StatefulWidget {
 class _LogPageState extends State<LogPage> {
   List<LatLng> items = [];
   bool isLoading = false;
+  bool isRefreshing = false;
 
   final ScrollController scrollController = ScrollController();
   final int defaultLimit = 20;
+  Timer? refreshTimer;
 
   @override
   void initState() {
-    onRefresh();
     super.initState();
+    unawaited(onRefresh());
+    refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      unawaited(onRefresh());
+    });
+  }
+
+  @override
+  void dispose() {
+    refreshTimer?.cancel();
+    scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> onRefresh() async {
-    final data = await SembastRepository.find(
-      limit: items.length > defaultLimit ? items.length : defaultLimit,
-    );
-    if (!mounted) {
+    if (isRefreshing) {
       return;
     }
-    setState(() {
-      items = data;
-    });
+    isRefreshing = true;
+    try {
+      final data = await SembastRepository.find(
+        limit: items.length > defaultLimit ? items.length : defaultLimit,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        items = data;
+      });
+    } on Exception catch (error, stackTrace) {
+      debugPrint('Failed to refresh background logs: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      isRefreshing = false;
+    }
   }
 
   Future<void> onLoadMore() async {
