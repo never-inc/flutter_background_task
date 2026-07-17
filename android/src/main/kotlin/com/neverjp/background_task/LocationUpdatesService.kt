@@ -251,7 +251,6 @@ class LocationUpdatesService : Service() {
         }
 
         registerStopReceiver()
-        startBackgroundEngine()
 
         val distanceFilter = pref.getFloat(distanceFilterKey, 0f)
         val updateIntervalInMilliseconds =
@@ -293,6 +292,19 @@ class LocationUpdatesService : Service() {
                 ).value
             stopSelf(startId)
             return START_NOT_STICKY
+        }
+
+        if (backgroundEngine == null) {
+            try {
+                startBackgroundEngine()
+            } catch (exception: RuntimeException) {
+                Log.e(TAG, "Unable to start background Flutter engine.", exception)
+                statusLiveData.value =
+                    StatusEventStreamHandler.StatusType.Error(
+                        exception.message
+                            ?: "Unable to start background Flutter engine.",
+                    ).value
+            }
         }
 
         requestLocationUpdates()
