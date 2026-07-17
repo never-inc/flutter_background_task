@@ -11,8 +11,7 @@ class LatLng {
       id: id,
       lat: (map['lat']! as num).toDouble(),
       lng: (map['lng']! as num).toDouble(),
-      createdAt:
-          DateTime.fromMillisecondsSinceEpoch(map['createdAt']! as int),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt']! as int),
     );
   }
 

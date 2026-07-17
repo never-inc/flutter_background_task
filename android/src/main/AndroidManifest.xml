@@ -1,12 +1,13 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-  package="com.neverjp.background_task">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <application>
         <service
             android:name=".LocationUpdatesService"
             android:foregroundServiceType="location"
             android:enabled="true"
-            android:exported="false"
-            android:permission="" />
+            android:exported="false" />
     </application>
 </manifest>

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:background_task_example/model/lat_lng.dart';
 import 'package:background_task_example/model/sembast_repository.dart';
@@ -6,7 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:map_launcher/map_launcher.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LogPage extends StatefulWidget {
   const LogPage({super.key});
@@ -130,9 +131,7 @@ class _LogPageState extends State<LogPage> {
                       return ListTile(
                         title: Text(
                           '${data.lat}, ${data.lng}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                          ),
+                          style: const TextStyle(fontSize: 14),
                         ),
                         leading: Text(
                           data.id.toString(),
@@ -142,15 +141,32 @@ class _LogPageState extends State<LogPage> {
                           ),
                         ),
                         trailing: Text(
-                          DateFormat('yyyy.M.d H:mm:ss', 'ja_JP')
-                              .format(data.createdAt),
+                          DateFormat(
+                            'yyyy.M.d H:mm:ss',
+                            'ja_JP',
+                          ).format(data.createdAt),
                         ),
                         onTap: () async {
-                          final availableMaps = await MapLauncher.installedMaps;
-                          await availableMaps.first.showMarker(
-                            coords: Coords(data.lat, data.lng),
-                            title: '${data.lat}, ${data.lng}',
+                          final coordinates = '${data.lat},${data.lng}';
+                          final uri = Platform.isIOS
+                              ? Uri.https('maps.apple.com', '/', {
+                                  'll': coordinates,
+                                  'q': coordinates,
+                                })
+                              : Uri(
+                                  scheme: 'geo',
+                                  path: coordinates,
+                                  queryParameters: {'q': coordinates},
+                                );
+                          final launched = await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
                           );
+                          if (!launched && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('地図アプリを開けませんでした。')),
+                            );
+                          }
                         },
                       );
                     },
@@ -174,12 +190,10 @@ class _LogPageState extends State<LogPage> {
                 SliverFillRemaining(
                   child: Center(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16)
-                          .copyWith(bottom: 108),
-                      child: const Text(
-                        'nothing',
-                        textAlign: TextAlign.center,
-                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                      ).copyWith(bottom: 108),
+                      child: const Text('nothing', textAlign: TextAlign.center),
                     ),
                   ),
                 ),

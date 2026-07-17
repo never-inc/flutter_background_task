@@ -3,7 +3,7 @@ description: "Demonstrates how to use the background_task plugin."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 environment:
-  sdk: '>=3.2.3 <4.0.0'
+  sdk: ^3.12.0
 
 dependencies:
   background_task:
@@ -21,8 +21,6 @@ dependencies:
 
   intl:
 
-  map_launcher: ^4.5.0
-
   path: ^1.9.1
 
   path_provider: ^2.1.2
@@ -31,7 +29,7 @@ dependencies:
 
   sembast: ^3.8.9+1
 
-  shared_preferences: ^2.2.2
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

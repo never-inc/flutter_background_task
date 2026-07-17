@@ -14,12 +14,7 @@ import 'package:permission_handler/permission_handler.dart';
 void backgroundHandler(Location data) {
   debugPrint('backgroundHandler: ${DateTime.now()}, $data');
   unawaited(
-    SembastRepository.add(
-      LatLng(
-        lat: data.lat ?? 0,
-        lng: data.lng ?? 0,
-      ),
-    ),
+    SembastRepository.add(LatLng(lat: data.lat ?? 0, lng: data.lng ?? 0)),
   );
 }
 
@@ -36,9 +31,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: MainPage(),
-    );
+    return const MaterialApp(home: MainPage());
   }
 }
 
@@ -123,14 +116,8 @@ class _MainPageState extends State<MainPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  _bgText,
-                  textAlign: TextAlign.center,
-                ),
-                Text(
-                  _statusText,
-                  textAlign: TextAlign.center,
-                ),
+                Text(_bgText, textAlign: TextAlign.center),
+                Text(_statusText, textAlign: TextAlign.center),
               ],
             ),
           ),
@@ -149,9 +136,7 @@ class _MainPageState extends State<MainPage> {
                   child: Text.rich(
                     TextSpan(
                       children: [
-                        const TextSpan(
-                          text: 'Monitor even if killed',
-                        ),
+                        const TextSpan(text: 'Monitor even if killed'),
                         WidgetSpan(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -174,8 +159,8 @@ class _MainPageState extends State<MainPage> {
                   child: FilledButton(
                     onPressed: () async {
                       final status = await Permission.location.request();
-                      final statusAlways =
-                          await Permission.locationAlways.request();
+                      final statusAlways = await Permission.locationAlways
+                          .request();
 
                       if (status.isGranted && statusAlways.isGranted) {
                         await BackgroundTask.instance.start(
@@ -186,7 +171,8 @@ class _MainPageState extends State<MainPage> {
                         });
                       } else {
                         setState(() {
-                          _bgText = 'Permission is not isGranted.\n'
+                          _bgText =
+                              'Permission is not isGranted.\n'
                               'location: $status\n'
                               'locationAlways: $statusAlways';
                         });
@@ -226,8 +212,9 @@ class _MainPageState extends State<MainPage> {
                                 action: SnackBarAction(
                                   label: 'close',
                                   onPressed: () {
-                                    ScaffoldMessenger.of(context)
-                                        .clearSnackBars();
+                                    ScaffoldMessenger.of(
+                                      context,
+                                    ).clearSnackBars();
                                   },
                                 ),
                               ),

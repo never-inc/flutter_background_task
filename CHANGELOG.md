@@ -1,3 +1,10 @@
+# Unreleased
+- Updated Android builds for Gradle 9.1, AGP 9, Kotlin 2.3, and JVM 17.
+- Improved Android foreground-service permissions, lifecycle cleanup, and
+  background callback delivery.
+- Added iOS Swift Package Manager support and improved background Flutter engine
+  lifecycle handling.
+
 # 0.2.0+2
 Updated README.
 

@@ -6,8 +6,8 @@ import 'package:sembast/sembast_io.dart';
 class SembastRepository {
   SembastRepository._();
 
-  static final StoreRef<int, Map<String, Object?>> _store =
-      intMapStoreFactory.store('latLngs');
+  static final StoreRef<int, Map<String, Object?>> _store = intMapStoreFactory
+      .store('latLngs');
 
   static Database? _database;
   static Future<Database>? _openingDatabase;
@@ -21,10 +21,7 @@ class SembastRepository {
     return _store.add(database, latLng.toMap());
   }
 
-  static Future<List<LatLng>> find({
-    int offset = 0,
-    required int limit,
-  }) async {
+  static Future<List<LatLng>> find({int offset = 0, required int limit}) async {
     final database = await _getDatabase();
     final records = await _store.find(
       database,
