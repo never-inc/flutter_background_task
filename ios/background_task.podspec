@@ -16,7 +16,7 @@ Processes location updates after a Flutter application transitions to the backgr
     ]
   }
   s.dependency 'Flutter'
-  s.platform = :ios, '13.0'
+  s.platform = :ios, '15.0'
 
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
   s.swift_version = '5.9'

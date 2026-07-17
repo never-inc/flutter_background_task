@@ -1,6 +1,7 @@
 # 0.3.0
 
-- Updated Android builds for Gradle 9.1, AGP 9, Kotlin 2.3, and JVM 17.
+- Updated Android builds for Gradle 9.1, AGP 9, Kotlin 2.2, and JVM 17.
+- Removed direct Kotlin Gradle Plugin application from the app and plugin.
 - Improved Android foreground-service permissions, lifecycle cleanup, and
   background callback delivery.
 - Added iOS Swift Package Manager support and improved background Flutter engine

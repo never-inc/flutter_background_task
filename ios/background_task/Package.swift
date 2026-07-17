@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "background_task",
     platforms: [
-        .iOS("13.0"),
+        .iOS("15.0"),
     ],
     products: [
         .library(name: "background-task", targets: ["background_task"]),
@@ -17,7 +17,7 @@ let package = Package(
         .target(
             name: "background_task",
             dependencies: [
-                .product(name: "Flutter", package: "FlutterFramework"),
+                .product(name: "FlutterFramework", package: "FlutterFramework"),
             ],
             resources: [
                 .process("PrivacyInfo.xcprivacy"),
