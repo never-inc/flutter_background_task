@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:background_task/background_task.dart';
 import 'package:background_task_example/log_page.dart';
-import 'package:background_task_example/model/isar_repository.dart';
 import 'package:background_task_example/model/lat_lng.dart';
+import 'package:background_task_example/model/sembast_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -13,21 +13,20 @@ import 'package:permission_handler/permission_handler.dart';
 @pragma('vm:entry-point')
 void backgroundHandler(Location data) {
   debugPrint('backgroundHandler: ${DateTime.now()}, $data');
-  Future(() async {
-    await IsarRepository.configure();
-    IsarRepository.isar.writeTxnSync(() {
-      final latLng = LatLng()
-        ..lat = data.lat ?? 0
-        ..lng = data.lng ?? 0;
-      IsarRepository.isar.latLngs.putSync(latLng);
-    });
-  });
+  unawaited(
+    SembastRepository.add(
+      LatLng(
+        lat: data.lat ?? 0,
+        lng: data.lng ?? 0,
+      ),
+    ),
+  );
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await BackgroundTask.instance.setBackgroundHandler(backgroundHandler);
-  await IsarRepository.configure();
+  await SembastRepository.configure();
   await initializeDateFormatting('ja_JP');
   runApp(const MyApp());
 }
@@ -70,18 +69,9 @@ class _MainPageState extends State<MainPage> {
       });
     });
 
-    Future(() async {
-      final result = await Permission.notification.request();
-      debugPrint('notification: $result');
-      if (Platform.isAndroid) {
-        if (result.isGranted) {
-          await BackgroundTask.instance.setAndroidNotification(
-            title: 'バックグラウンド処理',
-            message: 'バックグラウンド処理を実行中',
-          );
-        }
-      }
-    });
+    if (Platform.isAndroid) {
+      unawaited(_configureAndroidNotification());
+    }
 
     _statusDisposer = BackgroundTask.instance.status.listen((event) {
       final message =
@@ -90,6 +80,18 @@ class _MainPageState extends State<MainPage> {
         _statusText = message;
       });
     });
+  }
+
+  Future<void> _configureAndroidNotification() async {
+    final result = await Permission.notification.request();
+    debugPrint('notification: $result');
+    if (!result.isGranted) {
+      return;
+    }
+    await BackgroundTask.instance.setAndroidNotification(
+      title: 'バックグラウンド処理',
+      message: 'バックグラウンド処理を実行中',
+    );
   }
 
   @override
@@ -163,7 +165,7 @@ class _MainPageState extends State<MainPage> {
                             ),
                           ),
                           alignment: PlaceholderAlignment.middle,
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -186,7 +188,7 @@ class _MainPageState extends State<MainPage> {
                         setState(() {
                           _bgText = 'Permission is not isGranted.\n'
                               'location: $status\n'
-                              'locationAlways: $status';
+                              'locationAlways: $statusAlways';
                         });
                       }
                     },

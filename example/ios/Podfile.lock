@@ -2,59 +2,39 @@ PODS:
   - background_task (0.0.1):
     - Flutter
   - Flutter (1.0.0)
-  - integration_test (0.0.1):
-    - Flutter
   - isar_flutter_libs (1.0.0):
     - Flutter
   - map_launcher (0.0.1):
     - Flutter
-  - path_provider_foundation (0.0.1):
-    - Flutter
-    - FlutterMacOS
   - permission_handler_apple (9.3.0):
     - Flutter
-  - shared_preferences_foundation (0.0.1):
-    - Flutter
-    - FlutterMacOS
 
 DEPENDENCIES:
   - background_task (from `.symlinks/plugins/background_task/ios`)
   - Flutter (from `Flutter`)
-  - integration_test (from `.symlinks/plugins/integration_test/ios`)
   - isar_flutter_libs (from `.symlinks/plugins/isar_flutter_libs/ios`)
   - map_launcher (from `.symlinks/plugins/map_launcher/ios`)
-  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
-  - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
 
 EXTERNAL SOURCES:
   background_task:
     :path: ".symlinks/plugins/background_task/ios"
   Flutter:
     :path: Flutter
-  integration_test:
-    :path: ".symlinks/plugins/integration_test/ios"
   isar_flutter_libs:
     :path: ".symlinks/plugins/isar_flutter_libs/ios"
   map_launcher:
     :path: ".symlinks/plugins/map_launcher/ios"
-  path_provider_foundation:
-    :path: ".symlinks/plugins/path_provider_foundation/darwin"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
-  shared_preferences_foundation:
-    :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
 
 SPEC CHECKSUMS:
   background_task: a584ba6e093a60641252e89f7cd404ec92a30c8d
-  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  integration_test: 252f60fa39af5e17c3aa9899d35d908a0721b573
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   isar_flutter_libs: b69f437aeab9c521821c3f376198c4371fa21073
   map_launcher: 5fde49ac9a52672bf99da746599f507b4490d7b5
-  path_provider_foundation: 2b6b4c569c0fb62ec74538f866245ac84301af46
   permission_handler_apple: 9878588469a2b0d0fc1e048d9f43605f92e6cec2
-  shared_preferences_foundation: fcdcbc04712aee1108ac7fda236f363274528f78
 
-PODFILE CHECKSUM: 4ba2c4582f349e32c7ce76ee7ef693b53f2aef49
+PODFILE CHECKSUM: 2ec4d991c4d1a409a25a76d890584ec9e1dce804
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.16.2

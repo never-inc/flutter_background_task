@@ -1,12 +1,11 @@
 import 'dart:async';
 
-import 'package:background_task_example/model/isar_repository.dart';
 import 'package:background_task_example/model/lat_lng.dart';
+import 'package:background_task_example/model/sembast_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:isar/isar.dart';
 import 'package:map_launcher/map_launcher.dart';
 
 class LogPage extends StatefulWidget {
@@ -39,23 +38,25 @@ class _LogPageState extends State<LogPage> {
   }
 
   Future<void> onRefresh() async {
-    final data = await IsarRepository.isar.latLngs
-        .where()
-        .sortByCreatedAtDesc()
-        .limit(items.length > defaultLimit ? items.length : defaultLimit)
-        .findAll();
+    final data = await SembastRepository.find(
+      limit: items.length > defaultLimit ? items.length : defaultLimit,
+    );
+    if (!mounted) {
+      return;
+    }
     setState(() {
       items = data;
     });
   }
 
   Future<void> onLoadMore() async {
-    final data = await IsarRepository.isar.latLngs
-        .where()
-        .sortByCreatedAtDesc()
-        .offset(items.length)
-        .limit(defaultLimit)
-        .findAll();
+    final data = await SembastRepository.find(
+      offset: items.length,
+      limit: defaultLimit,
+    );
+    if (!mounted) {
+      return;
+    }
     setState(() {
       items = [...items, ...data];
     });
@@ -68,14 +69,14 @@ class _LogPageState extends State<LogPage> {
         title: const Text('Background Log'),
         actions: [
           IconButton(
-            onPressed: () {
-              HapticFeedback.heavyImpact();
-              IsarRepository.isar.writeTxnSync(() {
-                IsarRepository.isar.latLngs.clearSync();
+            onPressed: () async {
+              await HapticFeedback.heavyImpact();
+              await SembastRepository.clear();
+              if (mounted) {
                 setState(() {
                   items = [];
                 });
-              });
+              }
             },
             icon: const Icon(Icons.delete),
             iconSize: 32,
