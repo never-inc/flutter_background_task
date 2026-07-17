@@ -1,8 +1,10 @@
 package com.neverjp.background_task
 
+import com.google.android.gms.location.Priority
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import org.mockito.Mockito
 
 /*
@@ -15,13 +17,24 @@ import org.mockito.Mockito
 
 internal class BackgroundTaskPluginTest {
   @Test
-  fun onMethodCall_getPlatformVersion_returnsExpectedValue() {
+  fun onMethodCall_unknownMethod_returnsNotImplemented() {
     val plugin = BackgroundTaskPlugin()
 
-    val call = MethodCall("getPlatformVersion", null)
+    val call = MethodCall("unknown", null)
     val mockResult: MethodChannel.Result = Mockito.mock(MethodChannel.Result::class.java)
     plugin.onMethodCall(call, mockResult)
 
-    Mockito.verify(mockResult).success("Android " + android.os.Build.VERSION.RELEASE)
+    Mockito.verify(mockResult).notImplemented()
+  }
+
+  @Test
+  fun priorityNoPower_usesPassiveLocationPriority() {
+    val desiredAccuracy =
+      LocationUpdatesService.DesiredAccuracy.lookup("priorityNoPower")
+
+    assertEquals(
+      Priority.PRIORITY_PASSIVE,
+      desiredAccuracy.getLocationPriority(),
+    )
   }
 }

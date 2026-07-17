@@ -1,13 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
-import 'package:background_task_example/model/isar_repository.dart';
 import 'package:background_task_example/model/lat_lng.dart';
+import 'package:background_task_example/model/sembast_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:isar/isar.dart';
-import 'package:map_launcher/map_launcher.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LogPage extends StatefulWidget {
   const LogPage({super.key});
@@ -28,34 +28,59 @@ class LogPage extends StatefulWidget {
 class _LogPageState extends State<LogPage> {
   List<LatLng> items = [];
   bool isLoading = false;
+  bool isRefreshing = false;
 
   final ScrollController scrollController = ScrollController();
   final int defaultLimit = 20;
+  Timer? refreshTimer;
 
   @override
   void initState() {
-    onRefresh();
     super.initState();
-  }
-
-  Future<void> onRefresh() async {
-    final data = await IsarRepository.isar.latLngs
-        .where()
-        .sortByCreatedAtDesc()
-        .limit(items.length > defaultLimit ? items.length : defaultLimit)
-        .findAll();
-    setState(() {
-      items = data;
+    unawaited(onRefresh());
+    refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      unawaited(onRefresh());
     });
   }
 
+  @override
+  void dispose() {
+    refreshTimer?.cancel();
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> onRefresh() async {
+    if (isRefreshing) {
+      return;
+    }
+    isRefreshing = true;
+    try {
+      final data = await SembastRepository.find(
+        limit: items.length > defaultLimit ? items.length : defaultLimit,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        items = data;
+      });
+    } on Exception catch (error, stackTrace) {
+      debugPrint('Failed to refresh background logs: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      isRefreshing = false;
+    }
+  }
+
   Future<void> onLoadMore() async {
-    final data = await IsarRepository.isar.latLngs
-        .where()
-        .sortByCreatedAtDesc()
-        .offset(items.length)
-        .limit(defaultLimit)
-        .findAll();
+    final data = await SembastRepository.find(
+      offset: items.length,
+      limit: defaultLimit,
+    );
+    if (!mounted) {
+      return;
+    }
     setState(() {
       items = [...items, ...data];
     });
@@ -68,14 +93,14 @@ class _LogPageState extends State<LogPage> {
         title: const Text('Background Log'),
         actions: [
           IconButton(
-            onPressed: () {
-              HapticFeedback.heavyImpact();
-              IsarRepository.isar.writeTxnSync(() {
-                IsarRepository.isar.latLngs.clearSync();
+            onPressed: () async {
+              await HapticFeedback.heavyImpact();
+              await SembastRepository.clear();
+              if (mounted) {
                 setState(() {
                   items = [];
                 });
-              });
+              }
             },
             icon: const Icon(Icons.delete),
             iconSize: 32,
@@ -129,9 +154,7 @@ class _LogPageState extends State<LogPage> {
                       return ListTile(
                         title: Text(
                           '${data.lat}, ${data.lng}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                          ),
+                          style: const TextStyle(fontSize: 14),
                         ),
                         leading: Text(
                           data.id.toString(),
@@ -141,15 +164,32 @@ class _LogPageState extends State<LogPage> {
                           ),
                         ),
                         trailing: Text(
-                          DateFormat('yyyy.M.d H:mm:ss', 'ja_JP')
-                              .format(data.createdAt),
+                          DateFormat(
+                            'yyyy.M.d H:mm:ss',
+                            'ja_JP',
+                          ).format(data.createdAt),
                         ),
                         onTap: () async {
-                          final availableMaps = await MapLauncher.installedMaps;
-                          await availableMaps.first.showMarker(
-                            coords: Coords(data.lat, data.lng),
-                            title: '${data.lat}, ${data.lng}',
+                          final coordinates = '${data.lat},${data.lng}';
+                          final uri = Platform.isIOS
+                              ? Uri.https('maps.apple.com', '/', {
+                                  'll': coordinates,
+                                  'q': coordinates,
+                                })
+                              : Uri(
+                                  scheme: 'geo',
+                                  path: coordinates,
+                                  queryParameters: {'q': coordinates},
+                                );
+                          final launched = await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
                           );
+                          if (!launched && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('地図アプリを開けませんでした。')),
+                            );
+                          }
                         },
                       );
                     },
@@ -173,12 +213,10 @@ class _LogPageState extends State<LogPage> {
                 SliverFillRemaining(
                   child: Center(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16)
-                          .copyWith(bottom: 108),
-                      child: const Text(
-                        'nothing',
-                        textAlign: TextAlign.center,
-                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                      ).copyWith(bottom: 108),
+                      child: const Text('nothing', textAlign: TextAlign.center),
                     ),
                   ),
                 ),

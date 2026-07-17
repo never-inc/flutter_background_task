@@ -23,7 +23,9 @@ void callbackDispatcher() {
             lat: json['lat'] as double?,
             lng: json['lng'] as double?,
           );
-          callback?.call(data);
+          if (callback is BackgroundHandler) {
+            callback(data);
+          }
         }
       }
     })

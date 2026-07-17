@@ -6,21 +6,15 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:background_task_example/main.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Verify Platform version', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('shows background task controls', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
-    // Verify that platform version is retrieved.
-    expect(
-      find.byWidgetPredicate(
-        (Widget widget) =>
-            widget is Text && widget.data!.startsWith('Running on:'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Plugin example app'), findsOneWidget);
+    expect(find.text('Start'), findsOneWidget);
+    expect(find.text('Stop'), findsOneWidget);
+    expect(find.text('isRunning'), findsOneWidget);
   });
 }
