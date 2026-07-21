@@ -82,8 +82,8 @@ class _MainPageState extends State<MainPage> {
       return;
     }
     await BackgroundTask.instance.setAndroidNotification(
-      title: 'バックグラウンド処理',
-      message: 'バックグラウンド処理を実行中',
+      title: 'Background Task',
+      message: 'Background Task is running',
     );
   }
 
