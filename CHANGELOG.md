@@ -1,4 +1,8 @@
-# 0.3.0
+# 0.4.0
+
+TODO
+
+## 0.3.0
 
 - Updated Android builds for Gradle 9.1, AGP 9, Kotlin 2.2, and JVM 17.
 - Removed direct Kotlin Gradle Plugin application from the app and plugin.
@@ -7,7 +11,7 @@
 - Added iOS Swift Package Manager support and improved background Flutter engine
   lifecycle handling.
 
-# 0.2.0+2
+## 0.2.0+2
 
 Updated README.
 

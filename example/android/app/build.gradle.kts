@@ -1,10 +1,10 @@
 plugins {
-    id "com.android.application"
-    id "dev.flutter.flutter-gradle-plugin"
+    id("com.android.application")
+    id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
-    namespace "com.example.background_task_example"
+    namespace = "com.example.background_task_example"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -13,13 +13,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    sourceSets {
-        main.java.srcDirs += 'src/main/kotlin'
-    }
-
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId "com.example.background_task_example"
+        applicationId = "com.example.background_task_example"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
         minSdk = flutter.minSdkVersion
@@ -30,9 +26,9 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
+            // TODO: Add your own signing config (https://docs.flutter.dev/deployment/android#signing-the-app).
             // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 }
@@ -44,8 +40,5 @@ kotlin {
 }
 
 flutter {
-    source '../..'
-}
-
-dependencies {
+    source = "../.."
 }

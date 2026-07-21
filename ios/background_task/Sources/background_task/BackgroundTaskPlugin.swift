@@ -19,7 +19,12 @@ import CoreLocation
 import Flutter
 import UIKit
 
-public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
+public class BackgroundTaskPlugin:
+    NSObject,
+    FlutterPlugin,
+    CLLocationManagerDelegate,
+    FlutterSceneLifeCycleDelegate
+{
 
     private static func makeDispatchEngine() -> FlutterEngine {
         FlutterEngine(
@@ -86,6 +91,7 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = BackgroundTaskPlugin()
         registrar.addApplicationDelegate(instance)
+        registrar.addSceneDelegate(instance)
 
         let channel = FlutterMethodChannel(
             name: ChannelName.methods.value,
@@ -153,15 +159,29 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
     }
 
     public func applicationDidEnterBackground(_ application: UIApplication) {
-        if isEnabledEvenIfKilled {
-            Self.locationManager?.startMonitoringSignificantLocationChanges()
-        }
+        startMonitoringSignificantLocationChangesIfNeeded()
     }
 
     public func applicationWillTerminate(_ application: UIApplication) {
+        startMonitoringSignificantLocationChangesIfNeeded()
+    }
+
+    public func scene(
+        _ scene: UIScene,
+        willConnectTo session: UISceneSession,
+        options connectionOptions: UIScene.ConnectionOptions?
+    ) -> Bool {
         if isEnabledEvenIfKilled {
-            Self.locationManager?.startMonitoringSignificantLocationChanges()
+            restoreLocationUpdates()
         }
+
+        // Location relaunches don't consume a scene connection option, so
+        // allow other plugins to handle the connection options.
+        return false
+    }
+
+    public func sceneDidEnterBackground(_ scene: UIScene) {
+        startMonitoringSignificantLocationChangesIfNeeded()
     }
 
     public func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -262,6 +282,31 @@ public class BackgroundTaskPlugin: NSObject, FlutterPlugin, CLLocationManagerDel
             ).value
         )
         result(true)
+    }
+
+    private func restoreLocationUpdates() {
+        guard Self.locationManager == nil else {
+            Self.locationManager?.startMonitoringSignificantLocationChanges()
+            return
+        }
+
+        registerDispatchEngine()
+        let (distanceFilter, desiredAccuracy, pausesAutomatically) =
+            UserDefaultsRepository.instance.fetch()
+        startLocationManager(
+            distanceFilter: distanceFilter,
+            desiredAccuracy: desiredAccuracy,
+            pausesLocationUpdatesAutomatically: pausesAutomatically,
+            monitorSignificantChanges: true,
+            requestAuthorization: false
+        )
+    }
+
+    private func startMonitoringSignificantLocationChangesIfNeeded() {
+        guard isEnabledEvenIfKilled else {
+            return
+        }
+        Self.locationManager?.startMonitoringSignificantLocationChanges()
     }
 
     private func startLocationManager(

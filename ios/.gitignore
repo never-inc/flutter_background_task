@@ -12,6 +12,9 @@ build/
 GeneratedPluginRegistrant.h
 GeneratedPluginRegistrant.m
 
+# Swift Package Manager
+background_task/.build/
+
 .generated/
 
 *.pbxuser
