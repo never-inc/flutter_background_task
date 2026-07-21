@@ -1,5 +1,6 @@
 name: background_task_example
 description: "Demonstrates how to use the background_task plugin."
+version: 1.0.0+1
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 environment:

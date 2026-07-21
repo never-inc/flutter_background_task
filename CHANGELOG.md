@@ -6,6 +6,8 @@
   compatibility with AGP 9.
 - Added iOS `UIScene` lifecycle support and restored persistent background
   location monitoring when a scene connects or enters the background.
+- Migrated the iOS example from CocoaPods to Swift Package Manager and added
+  an explicit app build name and number.
 - Removed the unused `integration_test` dependency from the example project.
 
 ## 0.3.0
