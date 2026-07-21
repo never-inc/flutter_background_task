@@ -1,6 +1,12 @@
 # 0.4.0
 
-TODO
+- Converted the Android plugin and example project from Groovy Gradle scripts
+  to Kotlin DSL.
+- Updated the example project to Kotlin 2.2.20 while retaining Flutter 3.44
+  compatibility with AGP 9.
+- Added iOS `UIScene` lifecycle support and restored persistent background
+  location monitoring when a scene connects or enters the background.
+- Removed the unused `integration_test` dependency from the example project.
 
 ## 0.3.0
 
